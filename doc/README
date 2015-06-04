@@ -1,0 +1,26 @@
+#--------------------------------------------------------------------------
+# File and Version Information:
+#  $Id$
+#
+# Description:
+#  README file for package CookieBox_pkg
+#------------------------------------------------------------------------
+
+Package author: Ryan N. Coffee
+
+Brief description:
+==================
+
+Image analysis of Xtcav with correlation to machine parameters as well as CoolieBox spectra.
+
+Detailed description:
+=====================
+
+classes:
+CookieBox_mod -- main driver class with the usual psana methods like beginRun() etc.
+Learn -- contains most of the pattern recognition methods
+Acqiris -- interfaces to the Acquiris and crates are treated as separate instances in a std::vector<Acqiris>
+TimeTool -- interface to the images and the pre-analized data for the spectral encoding time tool
+Xtcav -- interface to the xtcav images
+Ebeam -- interface to the BLD data on the machine parmaeters
+
