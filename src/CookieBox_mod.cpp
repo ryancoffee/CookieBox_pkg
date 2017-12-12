@@ -500,12 +500,12 @@ namespace CookieBox_pkg {
 		if ( m_tt.use()){
 			if ( gdslice ) {
 				if (!m_tt.fill(evt,env,m_gd.value()) ) { 
-					std::cerr << "Failed the TimeTool for shot " << m_count_event.at(m_rank) << std::endl;
+					//std::cerr << "Failed the TimeTool for shot " << m_count_event.at(m_rank) << std::endl;
 					return false; 
 				}
 			} else { 
 				if (!m_tt.fill(evt,env)){
-					std::cerr << "Failed the TimeTool for shot " << m_count_event.at(m_rank) << std::endl;
+					//std::cerr << "Failed the TimeTool for shot " << m_count_event.at(m_rank) << std::endl;
 					return false;
 				}
 			}
@@ -939,7 +939,7 @@ namespace CookieBox_pkg {
 		std::cout << "Putting back rotor projections of diff spectra for Kareem" << std::endl;
 		//std::cout << "Skipping rotor projections of diff spectra until there are proper rotor bases in time domain " << std::endl;
 		if (m_makeRotorProjections){
-			std::string orthofilename(configStr("ta_orthofile","amoi0314_data/transabs/ta-amoi0314-r0214.rank0.result.orthonorm.r.93.055"));
+			std::string orthofilename(configStr("sim_orthofile","amoi0314_data/transabs/ta-amoi0314-r0214.rank0.result.orthonorm.r.93.055"));
 			std::cerr << "Projecting spectra " << std::endl;
 			if (!projectDiffSpectra(orthofilename)){std::cerr << "Failed to projectDiffSpectra(orthofilename)" << std::endl;return;}
 		}
@@ -1113,11 +1113,13 @@ namespace CookieBox_pkg {
 		a3d_d_t projections_3d;// needs to be in full scope
 		if (m_makeRotorProjections){
 			std::vector < std::vector <double> > orthobases;
-			std::string orthofilename(configStr("ta_orthofile","amoi0314_data/transabs/ta-amoi0314-r0214.rank0.result.orthonorm.r.93.055"));
+			//std::string orthofilename(configStr("ta_orthofile","amoi0314_data/transabs/ta-amoi0314-r0214.rank0.result.orthonorm.r.93.055"));
+			std::string orthofilename(configStr("sim_orthofile"));//,"amoi0314_data/simulation/rotorbases.dat.fouriershifingconstruct"));
 			std::ifstream orthofile(orthofilename.c_str(),std::ios::in);
 			try {
 				std::cerr << "Pulling orthofile " << orthofilename << std::endl;
 				orthofile >> orthobases;
+				std::cerr << "orthobases.size() = " << orthobases.size() << std::endl;
 			} catch (std::exception &e) {
 				std::cerr << "Failed to read in files for projectDiffSpectra(), error: " << e.what() << std::endl;
 				return false;
@@ -1192,8 +1194,6 @@ namespace CookieBox_pkg {
 			}
 		}
 		
-		std::cout << "\n\n\t\tSkipping rotor projections for now\n\n" << std::endl;
-
 		// need to declare these at high scope //
 		std::ofstream outabsfile;
 		std::ofstream outargfile;
@@ -1279,7 +1279,8 @@ namespace CookieBox_pkg {
 						if (m_printLegendreFFTs
 							&& outabsfile.is_open()
 							&& outargfile.is_open()
-							&& outrealfile.is_open()){ 
+							&& outrealfile.is_open())
+						{ 
 							detrend(timeslice_r,sz);
 							if (m_gaussroll){
 							//	gaussroll(timeslice_r,sz,m_gaussroll_center,m_gaussroll_width);
@@ -1339,7 +1340,8 @@ namespace CookieBox_pkg {
 				avgoutfile.close();
 				// Here we want to print the fft abs and args of the timeslices
 				// now we can print our projection files as maps in e and k
-				if (m_makeRotorProjections){
+				if (m_makeRotorProjections)
+				{
 					for (unsigned b=0;b<projections_3d.shape()[0];++b)
 					{
 						std::string filename = m_datadir + std::string("proj_legendre");
@@ -1537,7 +1539,6 @@ namespace CookieBox_pkg {
 			std::cerr << "Failed to fillLegendreVecs() in bool CookieBox_mod::computeLegendreCoeffs()" << std::endl;
 			return false;
 		}
-		//		HERE HERE HERE HERE
 		a5d_d_t::index_gen indices;
 		a4d_d_t::index_gen avg_indices;
 		a5d_d_t::array_view<1>::type slice = m_legendres_5d[indices [t][e][g][k][range()] ]; // slice 1D of the Legendre output
@@ -1550,7 +1551,6 @@ namespace CookieBox_pkg {
 			if (shots > 0 ){
 				for (unsigned c=0;c<nangles; ++c){
 					//x[c] = (double)c * (2.0/(double)nangles) - 1.0; // I dont think I actually need this one.
-					// HERE HERE HERE HERE //
 					// for Markus, somehow write this out to file //
 					double sum;
 					sum = 0.;
@@ -1841,6 +1841,10 @@ namespace CookieBox_pkg {
 			fftw_destroy_plan(plan_r2hc);
 		return true;
 	}
+
+
+
+
 	bool CookieBox_mod::projectDiffSpectra(const std::string orthofilename) 
 	{
 		std::vector<std::string> header;
@@ -1854,14 +1858,19 @@ namespace CookieBox_pkg {
 			return false;
 		}
 		orthofile.close();
-		std::vector<double> timeslice(m_data_5d.shape()[0],0.);
+		size_t nsamples = m_legendres_5d.shape()[0];
+		std::cout << "size_t nsamples = m_legendres_5d.shape()[0]; \t " << nsamples << std::endl;
+		std::vector<double> timeslice(nsamples,0.);
 
-		if (orthobases.front().size() > timeslice.size())
+		if (orthobases.front().size() > timeslice.size()){
+			std::cout << "condensing orthobases from " << orthobases.front().size() << " to ";
 			condense(orthobases,timeslice.size());
+			std::cout << orthobases.front().size() << " after condense(orthobases,timeslice.size()) call" << std::endl;
+		}
 
 		std::vector<double *> projections_r(orthobases.size()+1,(double*)NULL);   // add one to accept the mean as well.
 		std::vector<double *> projections_hc(orthobases.size()+1,(double*)NULL);   // add one to accept the mean as well.// later add another for back projected
-		unsigned nsamples = m_data_5d.shape()[4];
+		//unsigned nsamples = m_data_5d.shape()[4];
 		for (unsigned i=0;i<projections_r.size();++i){
 			projections_r[i] = (double*)fftw_malloc(sizeof(double) * nsamples);
 			projections_hc[i] = (double*)fftw_malloc(sizeof(double) * nsamples);
@@ -1879,18 +1888,26 @@ namespace CookieBox_pkg {
 				FFTW_MEASURE
 				);
 
+		/*
+		 * This needs to become for Legendres rather than individual channels
+		 */
 		//for (unsigned e = m_data_5d.shape()[ebind]/4; e<m_data_5d.shape()[ebind]*3/4 ; ++e)
 		{
 		unsigned e = 5;
 			//for ( unsigned g = 0; g < m_data_5d.shape()[gdind] ; ++g)
 			unsigned g = 1;
 			{
-				for ( unsigned c = 0; c < m_data_5d.shape()[chanind] ; ++c){
+				//for ( unsigned c = 0; c < m_data_5d.shape()[chanind] ; ++c){
+				for (size_t l = 0; l< m_legendres_5d.shape()[0]; ++l)
+				{ 
+					/*
+					 * HERE HERE HERE HERE
+					 */
 					std::string filename = m_datadir + std::string("projections");
 					filename+= "-" + m_str_experiment + "-r" + m_str_runnum;
 					filename += "_e" + boost::lexical_cast<std::string>(e);
 					filename += "_g" + boost::lexical_cast<std::string>(g);
-					filename += "_c" + boost::lexical_cast<std::string>(c);
+					filename += "_l" + boost::lexical_cast<std::string>(l);
 					filename += std::string(".dat");
 					//std::cerr << "printing file " << filename << std::endl;
 					std::ofstream outfile(filename.c_str(),std::ios::out);
@@ -1900,33 +1917,39 @@ namespace CookieBox_pkg {
 						outfile << b << "\t";
 					}
 					outfile << "\n";
-					for (unsigned sample = 0; sample < nsamples ; ++sample){
-						double mean = 0.;
+					size_t numenergies = m_legendres_5d.shape()[3];
+					for (size_t k = 0; k< numenergies ; ++k){
+						double mean;
 						unsigned meancontributions = 0;
-						for (unsigned t = 0; t < m_data_5d.shape()[0] ; ++t){
+						for (unsigned t = 0; t < nsamples ; ++t){
+							mean = 0.;
+							meancontributions = 0;
 							long long shots=0;
 							double result = 0.;
-							shots = m_shots_4d[t][e][g][c];
+							shots = m_shots_4d[t][e][g][k];
 							if ( shots > 0){
-								result = (double)m_data_5d[t][e][g][c][sample]/(double)shots;
+								result = (double)m_legendres_5d[t][e][g][l][k]/(double)shots;
 								mean += result;
 								++meancontributions;
-								result -= (double)m_avgSpectra[e][g][c][sample]/(double)m_avgSpectra_shots[e][g][c];
+								//result -= (double)m_avgSpectra[e][g][c][sample]/(double)m_avgSpectra_shots[e][g][c];
 							}
 							timeslice[t] = result;
 						}
 						removemean(timeslice); // don't change this... I'm doing a conditional mean removal
 						mean /= meancontributions;
 						outfile << mean << "\t" ;
-						projections_r[0][sample] = mean;
+						projections_r[0][k] = mean;
 						for(unsigned b=0;b<orthobases.size();++b){
 							double proj = projection(orthobases[b],timeslice);
 							outfile << proj << "\t";
-							projections_r[b+1][sample] = proj; // filling for FFT
+							projections_r[b+1][k] = proj; // filling for FFT
 						}
 						outfile << "\n";
 					}
+					outfile << "\n";
 					outfile.close();
+
+					/*
 
 					
 					// HERE, I want the FFT of every projection, but for now only the power spectrum.
@@ -1990,6 +2013,7 @@ namespace CookieBox_pkg {
 						backfftoutfile << "\n";
 					}
 					backfftoutfile.close();
+					*/
 				}
 			}
 		}

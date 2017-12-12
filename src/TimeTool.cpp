@@ -255,8 +255,9 @@ namespace CookieBox_pkg{
 			return false;
 		}
 		m_filled = true;
-		if (m_use_filter)
+		if (m_use_filter){
 			return testvalid_surf();	
+		}
 		return true;
 	}
 	bool TimeTool::fill(Event& evt,Env& env,const double gdin){
