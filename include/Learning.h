@@ -39,6 +39,7 @@ class Learning
 	public:
 		bool init(const unsigned nsamplesin, const unsigned nfeaturesin, const float variancein);
 		bool init( const unsigned nfeaturesin, const float variancein);
+		bool init(const std::string & filename);
 
 		inline bool use(bool in){m_use = in;return m_use;}
 		inline bool use(void){return m_use;}
@@ -70,13 +71,21 @@ class Learning
 		inline unsigned nfeatures(void){return m_features.cols;}
 		inline unsigned nsamples(void){return m_classifiers.rows;}
 
+		inline bool read_pca(void ){return m_read_pca;}
+		inline bool write_pca(void ){return m_write_pca;}
+		bool read_pca(const std::string & filename );
+		bool write_pca(const std::string & filename );
+
 		bool run_pca(const float retainvariance ); // for setting that the variance is not significantly reduced
 		bool run_pca(const unsigned ncomponents ); // for setting the number of principle components
-		bool project_pca(record_f & in,record_f & out);
-		record_f & project_pca(record_f & in);
-		bool compare_pca(data_f & in);
-		bool compare_pca_nonimage(data_f in,const unsigned nonimagefeatures);
-		bool compare_pca_images(data_f & in,cv::Size shape,const unsigned nonimagefeatures);
+
+		bool project_pca(std::vector<float> & in,std::vector<float> & out);
+		std::vector<float> & project_pca(std::vector<float> & in);
+		bool difference_pca_images(std::vector<float> & in,cv::Size shape,const unsigned nonimagefeatures,const unsigned event);
+		bool compare_pca_images(std::vector<float> & in,cv::Size shape,const unsigned nonimagefeatures,const unsigned event);
+		bool compare_pca_images(std::vector< std::vector<float> > & in,cv::Size shape,const unsigned nonimagefeatures);
+		bool compare_pca_nonimage(std::vector< std::vector<float> > in,const unsigned nonimagefeatures);
+		bool compare_pca(std::vector< std::vector< float > > & in);
 		bool inspect_eigen_pca(void);
 
 	protected:
@@ -90,7 +99,7 @@ class Learning
 
 		cv::Mat m_classifiers; 
 		//std::vector< std::vector< float > > m_features;
-		cv::Mat m_features, m_features_means;
+		cv::Mat m_features, m_features_means, m_test_features;
 		std::string m_features_labels;
 		std::vector< cv::Mat > m_images; // later, consider flattening these images when reading in.
 		unsigned m_pca_samples_limit;
@@ -103,6 +112,7 @@ class Learning
 		//cv::PCA* m_pcaPtr; // this didn't help... somehow there is an error when using CV_PCA_DATA_AS_ROW
 		unsigned m_pca_nfeatures;
 		float m_pca_retainvariance;
+		bool m_read_pca,m_write_pca;
 
 		// 	MPI related	//
 		unsigned m_root_rank,m_rank;

@@ -17,6 +17,8 @@ namespace CookieBox_pkg
 	Learning::Learning(void)
 	: m_use(false)
 	, m_print(false)
+	, m_read_pca(false)
+	, m_write_pca(false)
 	{
 	}
 
@@ -34,6 +36,8 @@ namespace CookieBox_pkg
 	: m_use(b.m_use)
 	, m_print(b.m_print)
 	, m_filename(b.m_filename)
+	, m_read_pca(b.m_read_pca)
+	, m_write_pca(b.m_write_pca)
 	{ // not so sure this is exception safe
 		m_features = b.m_features.clone(); 
 		m_classifiers = b.m_classifiers.clone(); 
@@ -117,8 +121,23 @@ namespace CookieBox_pkg
 	}
 
 
+	bool Learning::init(const std::string & filename)
+	{
+		m_read_pca = true;
+		m_write_pca = false;
+		if (read_pca( filename )){
+			m_pca_nfeatures = m_pca.eigenvectors.cols; 
+		} else {
+			std::cerr << "Failed to read file in Learning::init(const std::string & filename) method" << std::endl;
+			m_read_pca = false;
+			return false;
+		}
+		return true;
+	}
 	bool Learning::init(const unsigned nsamplesin, const unsigned nfeaturesin = 25, const float variancein = 0.9)
 	{
+		m_read_pca = false;
+		m_write_pca = true;
 		m_pca_samples_limit = nsamplesin;
 		m_pca_nfeatures = nfeaturesin;
 		m_pca_retainvariance = variancein;
@@ -154,30 +173,70 @@ namespace CookieBox_pkg
 		}
 	}
 
+	bool Learning::write_pca(const std::string & filename )
+	{       
+		if (!m_write_pca)
+			return false;
+		try{
+			cv::FileStorage fs(filename,cv::FileStorage::WRITE);
+			fs << "mean" << m_pca.mean;
+			fs << "eigenvectors" << m_pca.eigenvectors;
+			fs << "eigenvalues" << m_pca.eigenvalues;
+			fs.release();
+		} catch (cv::Exception &e){
+			std::cerr << "Failed in PCA::write() method, error: " << e.msg << std::endl;
+			return false;
+		}
+		return true;
+	}
+	bool Learning::read_pca(const std::string & filename )
+	{       
+		if (!m_read_pca)
+			return false;
+		try{
+			cv::FileStorage fs(filename,cv::FileStorage::READ);
+			fs["mean"] >> m_pca.mean ;
+			fs["eigenvectors"] >> m_pca.eigenvectors ;
+			fs["eigenvalues"] >> m_pca.eigenvalues ;
+			fs.release();
+		} catch (cv::Exception & e){
+			std::cerr << "Failed in PCA::write() method, error: " << e.msg << std::endl;
+			return false;
+		}
+		return true;
+
+	}
+	
 	// need a rerun_pca() method since now we check to see if eigenvecs are filled to test if we need to compute //
 	bool Learning::run_pca(const unsigned ncomponents )
 	{
-		std::cout << "entered Learning::run_pca() method" << std::endl;
 		if (m_pca.eigenvectors.rows != 0){
-			std::cout << "skipping Learning::run_pca() since m_pca.eigenvectors.rows != 0 indicates already computed" << std::endl;
+			//std::cout << "skipping Learning::run_pca() since m_pca.eigenvectors.rows != 0 indicates already computed" << std::endl;
 			return true;
 		}
+		std::cout << "entered Learning::run_pca() method, first time (I think)..." << std::endl;
 		time_t timer,start;
 		time(&start);
 
 		std::cerr << "m_features.rows = " << m_features.rows << "\n";
 		std::cerr << "m_features.cols = " << m_features.cols << std::endl;
+		std::cerr << "m_features_means.rows = " << m_features_means.rows << std::endl;
+		std::cerr << "m_features_means.cols = " << m_features_means.cols << std::endl;
 		try {
 			//std::cerr << "CV_PCA_DATA_AS_ROW = " << CV_PCA_DATA_AS_ROW << "\nCV_PCA_DATA_AS_COL = " << CV_PCA_DATA_AS_COL << std::endl;
 			//m_pca(m_pca_features, cv::Mat(), CV_PCA_DATA_AS_ROW, ncomponents); // this is weird  why no cv::PCA::DATA_AS_ROW
 			//m_pcaPtr = new cv::PCA(m_pca_features, cv::Mat(), CV_PCA_DATA_AS_ROW, ncomponents); // this is weird  why no cv::PCA::DATA_AS_ROW
 			m_pca(m_features, m_features_means,CV_PCA_DATA_AS_ROW ,ncomponents);
-			std::cerr << "Just after m_pca() ctor call in Learning::run_pca() method"
+			std::cout << "Just after m_pca() ctor call in Learning::run_pca() method"
 				<< "\n\t m_features_means.rows = " << m_features_means.rows 
 				<< "\n\t m_features_means.cols = " << m_features_means.cols
 				<< "\n\t m_pca.eigenvectors.rows = " << m_pca.eigenvectors.rows 
 				<< "\n\t m_pca.eigenvectors.cols = " << m_pca.eigenvectors.cols
+				<< "\n\t m_pca.mean.rows = " << m_pca.mean.rows 
+				<< "\n\t m_pca.mean.cols = " << m_pca.mean.cols
 				<< std::endl;
+			std::cout << "m_features_means.rows = " << m_features_means.rows << std::endl;
+			std::cout << "m_features_means.cols = " << m_features_means.cols << std::endl;
 		} catch (cv::Exception& err) {
 			std::cerr << "build m_pca failed in Learning::run_pca() method, err = " << err.msg << std::endl;
 			return false;
@@ -218,6 +277,8 @@ namespace CookieBox_pkg
 				<< "\n\t m_features_means.cols = " << m_features_means.cols
 				<< "\n\t m_pca.eigenvectors.rows = " << m_pca.eigenvectors.rows 
 				<< "\n\t m_pca.eigenvectors.cols = " << m_pca.eigenvectors.cols
+				<< "\n\t m_pca.mean.rows = " << m_pca.mean.rows 
+				<< "\n\t m_pca.mean.cols = " << m_pca.mean.cols
 				<< std::endl;
 		} catch (cv::Exception& err) {
 			std::cerr << "build m_pca failed in Learning::run_pca() method, err = " << err.msg << std::endl;
@@ -231,7 +292,7 @@ namespace CookieBox_pkg
 		return true;
 	}
 
-	record_f & Learning::project_pca(record_f & in)
+	std::vector<float> & Learning::project_pca(std::vector<float> & in)
 	{
 		std::vector<float> out;
 		cv::Mat point;  
@@ -252,7 +313,7 @@ namespace CookieBox_pkg
 
 		return out;
 	}
-	bool Learning::project_pca(record_f & in,record_f & out)
+	bool Learning::project_pca(std::vector<float> & in,std::vector<float> & out)
 	{
 		cv::Mat point;
 		try {
@@ -272,7 +333,7 @@ namespace CookieBox_pkg
 		return true;
 	}
 
-	bool Learning::compare_pca_nonimage(data_f in,const unsigned nonimagefeatures)
+	bool Learning::compare_pca_nonimage(std::vector< std::vector< float > > in,const unsigned nonimagefeatures)
 	{
 		cv::Mat resultmat;
 		cv::Mat inproj;
@@ -280,9 +341,6 @@ namespace CookieBox_pkg
 			std::string outfilename(m_filename);
 			infilename += ".testpcanonimage";
 			outfilename += ".testpcanonimage.result";
-			// HERE //
-			// we could figure a way to project and back project the entire matrix...
-			// But then we have to seperately unflatten the rows for the images...
 			try {
 				std::ofstream innonimage(infilename.c_str(),std::ios::out);
 				std::ofstream outnonimage(outfilename.c_str(),std::ios::out);
@@ -309,7 +367,72 @@ namespace CookieBox_pkg
 			}
 		return true;
 	}
-	bool Learning::compare_pca_images(data_f & in,cv::Size shape,const unsigned nonimagefeatures)
+	// HERE HERE HERE HERE //
+	// OK make a new method since we are doing this anyway row by row, might as well do it for each event //
+	// and name the images according to MPI rank //
+	bool Learning::difference_pca_images(std::vector<float> & in,cv::Size shape,const unsigned nonimagefeatures,const unsigned event){
+		cv::Mat result;
+		cv::Mat point;
+		std::string outfilename(m_filename);
+		outfilename += ".diffimage.result." + boost::lexical_cast<std::string>(event);
+		try {
+			std::ofstream outimage(outfilename.c_str(),std::ios::out);
+			outimage << "#pca difference result image, note: still doing PCA on the non-image features too\n";
+			point = m_pca.project(cv::Mat(in).t());
+			result = m_pca.backProject(point);
+			for (unsigned i=0;i<shape.height;++i){
+				for (unsigned j=0;j<shape.width;++j){
+					float value = in.at(nonimagefeatures + i*shape.width + j);
+					if (value > 0.0)
+						value -= result.at<float>(nonimagefeatures + i*shape.width + j);
+					outimage << value << "\t";
+				}
+				outimage << "\n";
+			}
+			outimage.close();
+		} catch (cv::Exception& err){
+			std::cerr << "projection failed in Learning::difference_pca_images() method, err: " << err.msg <<  std::endl;
+			return false;
+		} catch (std::exception & e) {
+			std::cerr << "file handeling failed in Learning::difference_pca_images() method, err: " << e.what() << std::endl;
+			return false;
+		}
+		return true;
+	}
+	bool Learning::compare_pca_images(std::vector<float> & in,cv::Size shape,const unsigned nonimagefeatures,const unsigned event){
+		cv::Mat result;
+		cv::Mat point;
+		std::string infilename(m_filename);
+		std::string outfilename(m_filename);
+		infilename += ".testpcaimage." + boost::lexical_cast<std::string>(event);
+		outfilename += ".testpcaimage.result." + boost::lexical_cast<std::string>(event);
+		try {
+			std::ofstream inimage(infilename.c_str(),std::ios::out);
+			std::ofstream outimage(outfilename.c_str(),std::ios::out);
+			inimage << "#pca input image, note: still doing PCA on the non-image features too\n";
+			outimage << "#pca result image, note: still doing PCA on the non-image features too\n";
+			point = m_pca.project(cv::Mat(in).t());
+			result = m_pca.backProject(point);
+			for (unsigned i=0;i<shape.height;++i){
+				for (unsigned j=0;j<shape.width;++j){
+					inimage << in.at(nonimagefeatures + i*shape.width + j) << "\t";
+					outimage << result.at<float>(nonimagefeatures + i*shape.width + j) << "\t";
+				}
+				inimage << "\n";
+				outimage << "\n";
+			}
+			inimage.close();
+			outimage.close();
+		} catch (cv::Exception& err){
+			std::cerr << "projection failed in Learning::compare_pca_images() method, err: " << err.msg <<  std::endl;
+			return false;
+		} catch (std::exception & e) {
+			std::cerr << "file handeling failed in Learning::compare_pca_images() method, err: " << e.what() << std::endl;
+			return false;
+		}
+		return true;
+	}
+	bool Learning::compare_pca_images(std::vector< std::vector< float > > & in,cv::Size shape,const unsigned nonimagefeatures)
 	{
 		cv::Mat result;
 		cv::Mat point;
@@ -342,13 +465,13 @@ namespace CookieBox_pkg
 				std::cerr << "projection failed in Learning::compare_pca_images() method, err: " << err.msg <<  std::endl;
 				return false;
 			} catch (std::exception & e) {
-				std::cerr << "projection failed in Learning::compare_pca_images() method, err: " << e.what() << std::endl;
+				std::cerr << "filehandeling failed in Learning::compare_pca_images() method, err: " << e.what() << std::endl;
 				return false;
 			}
 		}
 		return true;
 	}
-	bool Learning::compare_pca(data_f & in)
+	bool Learning::compare_pca(std::vector< std::vector< float > > & in)
 	{
 		cv::Mat result;
 		cv::Mat point;
@@ -374,6 +497,7 @@ namespace CookieBox_pkg
 		}
 		return true;
 	}
+
 	bool Learning::inspect_eigen_pca(void)
 	{
 		std::string eigenfilename(m_filename);
@@ -459,12 +583,14 @@ namespace CookieBox_pkg
 	// Train the regressor model on the spectra-as-clasifiers and the fisher output to make a spectrum prediction based on fisher output.
 	bool Learning::fill(std::vector<float> & in)
 	{
+		if (m_read_pca && m_pca.eigenvalues.rows != 0)
+			return false;
 		if (m_features.rows >= m_pca_samples_limit)
 			return false;
 		cv::Mat inMat(cv::Mat(in,true).t());// try making this false later
 		if (m_features.rows == 0){
 			m_features = inMat;
-			m_features.reserve(1000);
+			m_features.reserve(1000); // this reserves for at least 1000 future m_features.push_back(inMat) operations
 			return true;
 		}
 		if (m_features.cols != in.size()){

@@ -4,6 +4,7 @@
 #include <iostream>
 #include <assert.h>
 #include <iterator>
+#include <algorithm>
 
 #include <opencv2/core/core.hpp> // for eroding the mask image
 #include <opencv2/imgproc/imgproc.hpp> // for filtering/bluring, and thresholding the mask image
@@ -319,6 +320,10 @@ namespace CookieBox_pkg{
 					}
 				}
 			}
+			if (sum == 0.){
+				std::cerr << "in Xtcav::runstats() method, (long double) sum == 0.0" << std::endl;
+				return false;
+			}
 			m_data_stats.at(centroid_x) /= (long unsigned)sum;
 			m_data_stats.at(centroid_y) /= (long unsigned)sum;
 			return true;
@@ -335,6 +340,10 @@ namespace CookieBox_pkg{
 				vh_incr(val);
 			}
 		}
+		if (sum == 0){
+			std::cerr << "in Xtcav::runstats() method, (long long int)sum == 0" << std::endl;
+			return false;
+		}
 		m_data_stats.at(centroid_x) /= sum;
 		m_data_stats.at(centroid_y) /= sum;
 		return true;
@@ -347,57 +356,45 @@ namespace CookieBox_pkg{
 	bool Xtcav::crop_filtered(const unsigned eventnum)
 	{
 		// HERE crop is useful for dealing with the particular shape as an identifier in an eigen (or fisher) faces style algorithm
-		bool docropwidth,docropheight;
-		docropwidth = true;
-		docropheight = true;
 		if (m_crop_win.at(0) <=0 || m_crop_win.at(0) > m_filtered_image.cols)
-			docropwidth = false;
+			m_crop_win.at(0) = m_filtered_image.cols;
 		if (m_crop_win.at(1) <=0 || m_crop_win.at(1) > m_filtered_image.rows)
-			docropheight = false;
+			m_crop_win.at(1) = m_filtered_image.rows;
 		int left = 0;
 		int right = m_filtered_image.cols;
 		int top = 0;
 		int bottom = m_filtered_image.rows;
-		if (docropwidth){
-			left = m_data_stats.at(centroid_x) - m_crop_win.at(0)/2;
-			right = m_data_stats.at(centroid_x) + m_crop_win.at(0)/2;
-			if (left < 0){
-				left = 0;
-				right = m_crop_win.at(0);
-			}
-			if (right > m_filtered_image.cols){
-				right = m_filtered_image.cols;
-				left = m_filtered_image.cols - m_crop_win.at(0);
-			}
-		}
-		if (docropheight){
-			top = m_data_stats.at(centroid_y) - m_crop_win.at(1)/2;
-			bottom = m_data_stats.at(centroid_y) + m_crop_win.at(1)/2;
-			if (top < 0){
-				top = 0;
-				bottom = m_crop_win.at(1);
-			}
-			if (bottom > m_filtered_image.rows){
-				bottom = m_filtered_image.rows;
-				top = m_filtered_image.rows - m_crop_win.at(1);
-			}
-		}
+		left = m_data_stats.at(centroid_x) - m_crop_win.at(0)/2;
+		right = m_data_stats.at(centroid_x) + m_crop_win.at(0)/2;
+		top = m_data_stats.at(centroid_y) - m_crop_win.at(1)/2;
+		bottom = m_data_stats.at(centroid_y) + m_crop_win.at(1)/2;
 		try{
-			// for gnuplot, I think top and bottom are swapped
-			m_cropped_image = m_filtered_image(cv::Range(top,bottom), cv::Range(left,right)); 
-			// cv::pyrDown(m_cropped_image, m_cropped_downsampled, cv::Size(m_cropped_image.rows/4, m_cropped_image.cols));
-			m_cropped_downsampled = 
-				cv::Mat::zeros(m_cropped_image.rows/m_downsample_steps.at(0)+1
-					, m_cropped_image.cols/m_downsample_steps.at(1)+1
+			m_cropped_downsampled = cv::Mat::zeros(
+					m_crop_win.at(1)/m_downsample_steps.at(0)+1
+					, m_crop_win.at(0)/m_downsample_steps.at(1)+1
 					, CV_32F);
-			for (unsigned r = 0; r< m_cropped_image.rows;r+=m_downsample_steps.at(0)){
-				for (unsigned c = 0; c< m_cropped_image.cols; c+=m_downsample_steps.at(1)){
-					m_cropped_downsampled.at<float>(r/m_downsample_steps.at(0),c/m_downsample_steps.at(1)) = (m_cropped_image.at<float>(r,c));
+			for (int r = std::max(0,top); 
+					r < std::min(bottom,(int)(m_cropped_downsampled.rows - m_downsample_steps.at(0))); 
+					r += m_downsample_steps.at(0)){
+				for (int c = std::max(0,left); 
+						c < std::min(right,(int)(m_filtered_image.cols - m_downsample_steps.at(1))); 
+						c += m_downsample_steps.at(1)){
+					unsigned nelems;
+					nelems = 0;
+					for (unsigned i=r;i<std::min((int)(r+m_downsample_steps.at(0)),m_filtered_image.rows);++i){
+						for (unsigned j=c;j<std::min((int)(c+m_downsample_steps.at(1)),m_filtered_image.cols);++j){
+							m_cropped_downsampled.at<float>(r/m_downsample_steps.at(0),c/m_downsample_steps.at(1)) += (m_filtered_image.at<float>(i,j));
+							++nelems;
+						}
+					}
+					if (nelems > 1)
+						m_cropped_downsampled.at<float>(r/m_downsample_steps.at(0),c/m_downsample_steps.at(1)) /= nelems;
 				}
 			}
 
 		} catch (cv::Exception & e) {
 			std::cerr << "Failed to crop image in Xtcav::crop_filtered() method for event " << eventnum ;
+			std::cerr << " m_crop_win = " << m_crop_win.at(0) << ", " << m_crop_win.at(1) << std::endl;
 			std::cerr << " with cv::Exception: " << e.msg << std::endl;
 			return false;
 		}
@@ -409,25 +406,8 @@ namespace CookieBox_pkg{
 	{
 		std::string filename(m_filename);
 		filename += ".event_" + boost::lexical_cast<std::string>(eventnum);
-		filename += ".filtered.cropped";
-		std::ofstream outfile(filename.c_str(),std::ios::out);
-		if (!outfile.is_open()){
-			std::cerr << "Failed to open file in Xtcav::print_cropped() method" << std::endl;
-			return false;
-		}
-		outfile << "# cropped filtered image\n";
-		for (unsigned i=0;i<m_cropped_image.rows;++i){
-			for (unsigned j=0; j< m_cropped_image.cols; ++j){
-				outfile << m_cropped_image.at<float>(i,j) << "\t";
-			}
-			outfile << "\n";
-		}
-		outfile.close();
-
-		filename = m_filename;
-		filename += ".event_" + boost::lexical_cast<std::string>(eventnum);
 		filename += ".filtered.cropped.downsampled";
-		outfile.open(filename.c_str(),std::ios::out);
+		std::ofstream outfile(filename.c_str(),std::ios::out);
 		if (!outfile.is_open()){
 			std::cerr << "Failed to open file in Xtcav::print_cropped() method" << std::endl;
 			return false;
@@ -550,7 +530,7 @@ namespace CookieBox_pkg{
 			std::cerr << "load dark image failed in v::dark_file() method" << std::endl;
 			return false;
 		}
-		record_s header;
+		std::vector<std::string> header;
 		infile >> header;
 		infile >> m_dark_image;
 		infile.close();
@@ -568,6 +548,10 @@ namespace CookieBox_pkg{
 	}
 	bool Xtcav::print_out_avg(void)
 	{
+		if (m_average_nimages == 0){
+			std::cerr << "m_average_nimages == 0, failing Xtcav::print_out_avg() method" << std::endl;
+			return false;
+		}
 		std::string filename(m_filename);
 		filename += ".average";
 		std::cerr << "filename(m_filename) in Xtcav::print_out_avg() is " << filename << std::endl;
@@ -627,9 +611,19 @@ namespace CookieBox_pkg{
 			std::cerr << "Failed to filter image in Xtcav::process_image() method, error: " << e.msg << std::endl;
 			return false;
 		}
+		/*
 		if (m_print && !print_filtered(eventnum)){
 			return false;
 		}
+		*/
+		return true;
+	}
+	bool Xtcav::print_debug(void)
+	{
+		std::cerr << "printing debug to stderr\n";
+		std::cerr << "m_data.size() = " << m_data.size() << " records\t";
+		std::cerr << "m_data.front().size() = " << m_data.front().size() << " record length\n";
+		std::cerr << std::flush;
 		return true;
 	}
 	bool Xtcav::print_filtered(const unsigned eventnum)

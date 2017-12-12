@@ -13,6 +13,7 @@ namespace CookieBox_pkg{
 			, std::vector<double>& maxs_in)
 	: m_use(false)
 	, m_print(false)
+	, m_filled(false)
 	  , m_print_parallel(false)
 	{
 		init(bins_in, mins_in, maxs_in);
@@ -34,6 +35,7 @@ namespace CookieBox_pkg{
 	Gdet::Gdet(const Gdet & b)
 	: m_use(b.m_use)
 	, m_print(b.m_print)
+	, m_filled(b.m_filled)
 	, m_print_parallel(b.m_print_parallel)
 	, m_srcPtr(b.m_srcPtr)
 	, m_srcStr(b.m_srcStr)
@@ -75,6 +77,7 @@ namespace CookieBox_pkg{
 	{
 		std::swap(a.m_use,b.m_use);
 		std::swap(a.m_print,b.m_print);
+		std::swap(a.m_filled,b.m_filled);
 		std::swap(a.m_print_parallel,b.m_print_parallel);
 		std::swap(a.m_srcPtr,b.m_srcPtr);
 		std::swap(a.m_srcStr,b.m_srcStr);
@@ -158,6 +161,7 @@ namespace CookieBox_pkg{
 		return true;
 	}
 	bool Gdet::fill(Event& evt, Env& env){
+		m_filled = false;
 		m_srcPtr = evt.get(m_srcStr);
 		if ( !m_srcPtr.get()) { 
 			std::cerr << "Couldn't get m_srcPtr = evt.get(m_srcStr); in  Gdet::fill() method" << std::endl;
@@ -176,6 +180,8 @@ namespace CookieBox_pkg{
 		}
 		std::cerr << std::endl;
 		*/
+
+		m_filled = true;
 
 		return true;	
 	}

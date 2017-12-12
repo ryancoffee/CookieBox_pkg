@@ -52,6 +52,7 @@ class Ebeam
 				return false;
 			return m_print;
 		}
+		inline bool filled(void){return m_filled;}
 		bool init( std::vector<unsigned>& bins_in
 				, std::vector<double>& mins_in
 				, std::vector<double>& maxs_in );
@@ -142,7 +143,7 @@ class Ebeam
 			return (i<m_bins.at(energy_bc1) ? i : 0);
 		}
 	private:
-		bool m_use,m_print;
+		bool m_use,m_print,m_filled;
 		std::ofstream m_outfile;
 		std::string m_filename;
 

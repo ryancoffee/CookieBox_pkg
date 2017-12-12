@@ -1,0 +1,3 @@
+#!/bin/bash
+cd /reg/neh/home/coffee/analysis_2015/CookieBox_pkg 
+vim src/*.cpp include/*.h

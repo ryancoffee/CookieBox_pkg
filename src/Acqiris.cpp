@@ -15,6 +15,7 @@ namespace CookieBox_pkg
 	: m_getConfig(true)
 	, m_use(false)
 	, m_print(false)
+	, m_nchannels(1)
 	{
 		init(lims_in,baselims_in);
 	}
@@ -23,6 +24,7 @@ namespace CookieBox_pkg
 	: m_getConfig(true)
 	, m_use(false)
 	, m_print(false)
+	, m_nchannels(1)
 	{
 	}
 
@@ -55,9 +57,6 @@ namespace CookieBox_pkg
 			m_baselims[i] = b.m_baselims[i];
 
 		this->m_data = b.m_data; 
-		this->m_integlims = b.m_integlims;
-		//deepcopy_data(b);
-		//deepcopy_integlims(b);
 
 		if (m_print){
 			m_filename += ".copy";
@@ -74,15 +73,6 @@ namespace CookieBox_pkg
 				m_data[i][j] = b.m_data[i][j];
 		}
 	}
-	void Acqiris::deepcopy_integlims(const Acqiris & b)
-	{
-		m_integlims.resize(b.m_integlims.size());
-		for ( unsigned i=0;i<b.m_integlims.size();++i){
-			m_integlims[i].resize(b.m_integlims[i].size());
-			for (unsigned j=0;j<b.m_integlims[i].size();++j)
-				m_integlims[i][j] = b.m_integlims[i][j];
-		}
-	}
 	void Acqiris::swap(Acqiris& a, Acqiris& b){
 		std::swap(a.m_getConfig,b.m_getConfig);
 		std::swap(a.m_use,b.m_use);
@@ -96,7 +86,6 @@ namespace CookieBox_pkg
 		m_data.swap(b.m_data);
 		m_lims.swap(b.m_lims);
 		m_baselims.swap(b.m_baselims);
-		m_integlims.swap(b.m_integlims);
 
 		std::swap(a.m_print,b.m_print);
 		std::swap(a.m_filename,b.m_filename);
@@ -143,6 +132,7 @@ namespace CookieBox_pkg
 		for (unsigned i=0;i<m_baselims.size();++i)
 			std::cerr << m_baselims.at(i) << "\t";
 		std::cerr << "\n" << std::flush;
+		std::cerr << "m_nchannels (in Acqiris::init() ) = " << m_nchannels << std::endl;
 		return true;
 	}
 
@@ -160,7 +150,6 @@ namespace CookieBox_pkg
 
 		for (unsigned j=0;j<m_data[chan].size();++j){
 			(*outmatPtr)[j] = m_data[chan][j];
-			(*outmatPtr)[j] *= -1.; // reverses polarity since etofs read negative // HERE use an bool m_invertAcq to toggle this //
 		}
 		evt.put(outmatPtr,outkey);
 	}
@@ -176,7 +165,6 @@ namespace CookieBox_pkg
 		for (unsigned i = 0; i < m_data.size();++i){ 
 			for (unsigned j=0;j<m_data[i].size();++j){
 				(*outmatPtr)[i][j] = m_data[i][j];
-				(*outmatPtr)[i][j] *= -1.; // reverses polarity since etofs read negative // HERE use an bool m_invertAcq to toggle this //
 			}
 		}
 		evt.put(outmatPtr,outkey);
@@ -189,10 +177,61 @@ namespace CookieBox_pkg
 	//	Lets use the sparsity rather than fill the entire ND array	//
 	//	std::map gives a key::value pair	//
 
+	bool Acqiris::fill(Event& evt, Env& env, a5d_ll_2dview_t & slice, a4d_ll_1dview_t & shotslice)
+	{
+		// use this method to fill a slice of the multi_array where we want the histogram.
+		m_srcPtr = evt.get(m_srcStr);
+		if (!m_srcPtr.get()){return false;}
+
+		//std::cerr << "m_nchannels in Acqiris::fill() = " << m_nchannels << std::endl;
+		if (m_getConfig){std::cout << getConfig(env);}
+		//std::cerr << "m_nchannels in Acqiris::fill() after m_getConfig test = " << m_nchannels << std::endl;
+
+		if (m_data.size() != m_nchannels)
+			m_data.resize(m_nchannels);
+		if (m_data.back().size() != m_lims.at(bins)){
+			for (unsigned c=0;c<m_data.size();++c)
+				m_data[c].resize(m_lims.at(bins),0);
+		}
+
+		for (unsigned chan=0;chan<m_nchannels;++chan){
+			shortwf_t wf = m_srcPtr->data(chan).waveforms(); // the 2D'ness of this is for the unused segments, not the channels.
+
+			const int segment = 0; // [chris ogrady] always 0 for LCLS data taken so far (a feature of the acqiris we don't use)
+			long long basesum;
+			basesum = 0;
+			for (unsigned s = m_baselims.at(start); s < m_baselims.at(stop);++s){
+				// fill baseline //
+				basesum += wf[segment][s];
+			}
+			for (unsigned s = 0; s < m_lims.at(bins); ++s) {
+				long int val = (wf[segment][m_lims.at(start) + s] - basesum/m_baselims.at(bins));
+				if (m_invert)
+					val *= -1;
+				slice[chan][s] += val;
+				m_data.at(chan).at(s) += val;
+			}
+			++shotslice[chan]; 
+		}
+		return true;
+	}
+
 	bool Acqiris::fill(Event& evt, Env& env, a4d_ll_2dview_t & slice)
 	{
 		// use this method to fill a slice of the multi_array where we want the histogram.
+		m_srcPtr = evt.get(m_srcStr);
+		if (!m_srcPtr.get()){return false;}
+
+		//std::cerr << "m_nchannels in Acqiris::fill() = " << m_nchannels << std::endl;
 		if (m_getConfig){std::cout << getConfig(env);}
+		//std::cerr << "m_nchannels in Acqiris::fill() after m_getConfig test = " << m_nchannels << std::endl;
+
+		if (m_data.size() != m_nchannels)
+			m_data.resize(m_nchannels);
+		if (m_data.back().size() != m_lims.at(bins)){
+			for (unsigned c=0;c<m_data.size();++c)
+				m_data[c].resize(m_lims.at(bins),0);
+		}
 
 		for (unsigned chan=0;chan<m_nchannels;++chan){
 			shortwf_t wf = m_srcPtr->data(chan).waveforms(); // the 2D'ness of this is for the unused segments, not the channels.
@@ -209,7 +248,11 @@ namespace CookieBox_pkg
 				basesum += wf[segment][s];
 			}
 			for (unsigned s = 0; s < m_lims.at(bins); ++s) {
-				slice[chan][s] += (wf[segment][m_lims.at(start) + s] - basesum/m_baselims.at(bins));
+				long int val = (wf[segment][m_lims.at(start) + s] - basesum/m_baselims.at(bins));
+				if (m_invert)
+					val *= -1;
+				slice[chan][s] += val;
+				m_data.at(chan).at(s) += val;
 			}
 		}
 		return true;
@@ -219,9 +262,9 @@ namespace CookieBox_pkg
 		m_srcPtr = evt.get(m_srcStr);
 		if (!m_srcPtr.get()){return false;}
 
-		//std::cerr << "trying to test to getConfig() in Acqiris::fill() method" << std::endl;
+		std::cerr << "trying to test to getConfig() in Acqiris::fill() method" << std::endl;
 		if (m_getConfig){std::cout << getConfig(env);}
-		//std::cerr << "m_nchannels = " << m_nchannels << std::endl;
+		std::cerr << "m_nchannels = " << m_nchannels << std::endl;
 
 
 		if (m_data.size() != m_nchannels)
@@ -250,25 +293,20 @@ namespace CookieBox_pkg
 			}
 			//std::cerr << "\t ... got baseline channel " << chan << std::flush;
 			for (unsigned s = 0; s < m_lims.at(bins); ++s) {
-				m_data.at(chan).at(s) += (wf[segment][m_lims.at(start) + s] - basesum/m_baselims.at(bins));
+				long int val = (wf[segment][m_lims.at(start) + s] - basesum/m_baselims.at(bins));
+				if (m_invert)
+					val *= -1;
+				m_data.at(chan).at(s) += val;
 			}
 			//std::cerr << "\t ... filled channel " << chan << std::endl;
 		}
 		return true;
 	}
 
-	void Acqiris::integlims(std::vector < std::vector <unsigned> > & in)
-	{
-		std::vector <unsigned>::iterator itr_lows = in.front().begin();
-		std::vector <unsigned>::iterator itr_highs = in.back().begin(); 
-
-		m_integlims.resize(in.size());
-		m_integlims.front().assign(itr_lows,in.front().end());
-		m_integlims.back().assign(itr_highs,in.back().end());
-	}
-	
 	std::string Acqiris::getConfig(Env& env)
 	{
+		if (!m_getConfig)
+			return "Already go tconfig";
 		std::cerr << "Entered Acqiris::getConfig() method " << std::endl;
 		m_ConfigPtr = env.configStore().get(m_srcStr, &m_src);
 		std::stringstream ss;
@@ -297,6 +335,7 @@ namespace CookieBox_pkg
 				}
 			}
 			m_nchannels = m_ConfigPtr->nbrChannels();
+			std::cerr << "m_nchannels = " << m_nchannels << std::endl;
 			m_max_samples = m_ConfigPtr->horiz().nbrSamples();
 			if (m_max_samples < m_lims.at(stop)){
 				m_lims.at(bins) = m_max_samples - m_lims.at(start); // ensure to not over-run
@@ -328,10 +367,12 @@ namespace CookieBox_pkg
 			return false;
 		for (unsigned s=0;s<m_data.at(0).size();++s){
 			for (unsigned c=0;c<m_data.size();++c){
-				m_outfile << m_data.at(c).at(s) << "\t";
+				int val = m_data.at(c).at(s);
+				m_outfile << val << "\t";
 			}
 			m_outfile << "\n";
 		}
+		m_outfile.close();
 		return true;
 	}
 	bool Acqiris::print_out(void){
@@ -339,7 +380,8 @@ namespace CookieBox_pkg
 			return false;
 		for (unsigned c=0;c<m_data.size();++c){
 			for (unsigned s=0;s<m_data.at(c).size();++s){
-				m_outfile << m_data[c][s] << "\t";
+				int val = m_data.at(c).at(s);
+				m_outfile << val << "\t";
 			}
 			m_outfile << "\n";
 		}

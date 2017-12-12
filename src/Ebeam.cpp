@@ -14,6 +14,7 @@ namespace CookieBox_pkg{
 	: m_version(0)
 	, m_use(false)
 	, m_print(false)
+	, m_filled(false)
 	{
 		init(bins_in,mins_in,maxs_in);
 	}
@@ -22,6 +23,7 @@ namespace CookieBox_pkg{
 	: m_version(0)
 	, m_use(false)
 	, m_print(false)
+	, m_filled(false)
 	{
 //		m_label_strings = {"charge","energy","ltux","ltuy","ltuDx","ltuDy","pkcurr_bc2","energy_bc2","pkcurr_bc1","energy_bc1"};
 	}
@@ -38,6 +40,7 @@ namespace CookieBox_pkg{
 	Ebeam::Ebeam(const Ebeam & b)
 	: m_use(b.m_use)
 	, m_print(b.m_print)
+	, m_filled(b.m_filled)
 	, m_srcPtrV6(b.m_srcPtrV6)
 	, m_srcPtrV7(b.m_srcPtrV7)
 	, m_srcStr(b.m_srcStr)
@@ -82,6 +85,7 @@ namespace CookieBox_pkg{
 		m_data.swap(b.m_data);
 
 		std::swap(a.m_print,b.m_print);
+		std::swap(a.m_filled,b.m_filled);
 		std::swap(a.m_filename,b.m_filename);
 		if (a.m_outfile.is_open() && b.m_outfile.is_open()){
 			a.m_outfile.close();
@@ -162,6 +166,7 @@ namespace CookieBox_pkg{
 		}
 	}
 	bool Ebeam::fill(Event& evt, Env& env){
+		m_filled = false;
 		if (m_version == 0) {
 			if ( ! testVersion( evt, env) ) // this checks if untested, tests if not
 				return false;
@@ -181,6 +186,7 @@ namespace CookieBox_pkg{
 				m_data.at(current).at(energy_bc2)=m_srcPtrV6->ebeamEnergyBC2();
 				m_data.at(current).at(pkcurr_bc1)=m_srcPtrV6->ebeamPkCurrBC1();
 				m_data.at(current).at(energy_bc1)=m_srcPtrV6->ebeamEnergyBC1();
+				m_filled = true;
 				return true;	
 			
 			case 7:
@@ -196,11 +202,11 @@ namespace CookieBox_pkg{
 				m_data.at(current).at(pkcurr_bc1)=m_srcPtrV7->ebeamPkCurrBC1();
 				m_data.at(current).at(energy_bc1)=m_srcPtrV7->ebeamEnergyBC1();
 				m_version = 7;
+				m_filled = true;
 				return true;
 			
 			default:
 				std::cerr << "Couldn't get Ebeam::fill() method" << std::endl;
-				
 				return testVersion(evt, env); // this checks if untested, tests if not
 		}
 		return false; // shouldn't actually ever fall here.

@@ -105,7 +105,7 @@ class Xtcav
 		inline bool remove_dark(void){return m_remove_dark;}
 		inline bool remove_dark(bool in){m_remove_dark = in;return m_remove_dark;}
 		bool dark_file(const std::string inname);
-		data_f m_dark_image;
+		std::vector< std::vector< float > > m_dark_image;
 		inline cv::Size eigenface_shape(void){return m_cropped_downsampled.size();}
 		inline unsigned nonimage_features(void){return m_nonimage_features;}
 
@@ -119,6 +119,7 @@ class Xtcav
 		bool print_out_vh(void);
 		bool print_out_vh(const unsigned eventnum);
 		bool print_out_stats(const unsigned eventnum);
+		bool print_debug(void);
 		bool print_header_vh(void);
 		bool print_header_stats(void);
 		void open_file( std::string & filename );

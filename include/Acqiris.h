@@ -23,10 +23,11 @@ class Acqiris
 {
 	typedef ndarray<const short,2> shortwf_t;
 	typedef boost::multi_array_types::index_range ind_range;
+	typedef boost::multi_array<long long,4>::array_view<1>::type a4d_ll_1dview_t;
 	typedef boost::multi_array<long long,4>::array_view<2>::type a4d_ll_2dview_t;
+	typedef boost::multi_array<long long,4>::array_view<2>::type a5d_ll_2dview_t;
 
 	public:
-		enum integLims {integ_lowInd, integ_highInd, integ_binsInd};
 		enum LimsInd {start,stop,bins};
 		Acqiris (void);
 		Acqiris (std::vector<unsigned>& lims_in , std::vector<unsigned>& baselims_in);
@@ -37,7 +38,7 @@ class Acqiris
 	private:	
 		void swap(Acqiris & a, Acqiris & b);
 		void deepcopy_data(const Acqiris & b);
-		void deepcopy_integlims(const Acqiris & b);
+
 
 	public:
 		bool init( std::vector<unsigned>& lims_in, std::vector<unsigned>& baselims_in);
@@ -56,6 +57,8 @@ class Acqiris
 				return false;
 			return m_print;
 		}
+		inline bool invert(void){return m_invert;}
+		inline bool invert(bool in){m_invert = in;return m_invert;}
 		bool print_out(const unsigned eventnum);
 		bool print_out(void);
 		void print_header(void);
@@ -65,24 +68,24 @@ class Acqiris
 		void evtput(Event& evt, Env& env);
 		void evtput(Event& evt, Env& env, const unsigned chan);
 
+		bool fill(Event& evt, Env& env, a5d_ll_2dview_t & slice, a4d_ll_1dview_t & shotslice);
 		bool fill(Event& evt, Env& env, a4d_ll_2dview_t & slice);
 		bool fill(Event& evt, Env& env);
 		bool addfeatures(std::vector<float> & out);
 
 		void srcStr(Source srcStr_in);
 
-		void integlims(std::vector < std::vector <unsigned> > & in);
 		inline unsigned nchannels(void){return m_nchannels;}
 		inline unsigned nsamples(void){return m_lims.at(bins);}
+		std::string getConfig(Env& env);
 
 	protected:
 
 	private:
-		bool m_use,m_print;
+		bool m_use,m_print,m_invert;
 		std::ofstream m_outfile;
 		std::string m_filename;
 
-		std::string getConfig(Env& env);
 		bool m_getConfig;
 		boost::shared_ptr<Psana::Acqiris::ConfigV1> m_ConfigPtr;
 		boost::shared_ptr<Psana::Acqiris::DataDescV1> m_srcPtr; 
@@ -90,8 +93,6 @@ class Acqiris
 		Pds::Src m_src;
 
 		std::vector< std::vector<int> > m_data;
-		std::vector< std::vector< unsigned > > m_integlims;
-
 
 		unsigned m_nchannels;
 		unsigned m_max_samples;

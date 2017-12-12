@@ -1,0 +1,87 @@
+OK, using non-lasing images only, create a PCA set keeping of order 100 features, including the centroids, then take new oos shots and project them onto the PCA basis and think of how to identify unique faces.  Then project the lasing images through the same pca and find the nearest neighbor based on the image projection, then compare to the reference image.  Sobtract and see if you get only the lasing section.
+Now, if the lasing shows up clearly, build a new pca set out of the lasing images and the non-image features and try to find which non-image features are strongest correlation with lasing.  Classify those features and lasing images with kmeans and look at in-class acqiris spectra (treated as 200x16 images/arrays).
+
+
+
+
+
+For learning, use every other shot as a training and the others as validation shot, or in the begiining, use last_shot/2 as training and then do Chi^2 against the spectra from the others to test the validation.
+	Something to keep in mind, PCA finds linear correlations, but Support Vector Machines can draw curved hypersurfaces to divide populaitons into groups.
+	this could mean that we should use all the features, at least definately keep un-PCA projected components those that are non-linearly corr.
+	build an inspection for the eigen vectores...
+
+For now, print the integlims data for normalization into the header of the files.
+	But this only happens for when we output the slice of the multi_array
+
+propagate the evt.put() to each of the classes for passing to python as ndarray<> types.
+
+add an integration of slice output at least for dealing with the a4d_ll_t histogram
+
+Check the correlation of the ebeam energy L3 and the current with the Xtcav vertical centroid and the horiz width respectively
+	If these have strong correlation, then use that correlation to remove the necessity to keep entire images in library
+	In fact, what if we used the addresses of the pixels above Otsu threshold as the fingerprint.
+
+
+Make a new module for building the xtcav library... keep all the Acqiris and Xtcav classes to use as features for learning.
+Not a new module, but build a Prediciton class that uses a switch to derive the library using OpenCV and save (as binary likely) and also has a mode that predicts... or build a training class and a Predicting class.
+The algorithm is 
+	possibly we need to cross correlate to find the centering of the image.
+	refs versus machine parameters to build the lasing off library... possibly also do this with the darkimages Versus machine conditions
+	use the laseingoff library as backgrounds for the with lasing library and 
+	store each classifier (KNN) as the index of an Argon spectrum together with a delay
+	Now, given the new shot, use the xtcav image, remove the lasingoff library
+
+
+Try a 4D K-means with 2 clusters.  The cluster near zero is bogus... the other cluster indicates that shot deserves membership for processing
+Use corellation of etof signal windows with gdets to determine scaling for normalization
+
+
+
+
+-bash-3.2$ valgrind psana -c psana_cookiebox.cfg exp=amo86815:run=69
+==24267== Memcheck, a memory error detector
+==24267== Copyright (C) 2002-2009, and GNU GPL'd, by Julian Seward et al.
+==24267== Using Valgrind-3.5.0 and LibVEX; rerun with -h for copyright info
+==24267== Command: psana -c psana_cookiebox.cfg exp=amo86815:run=69
+==24267== 
+in Xtcav::dark_file() method, loading dark_file amo86815_data_dark/xt-amo86815-r0068.rank0.average
+Entered the locic_itr for initializing vector<m_aq>
+lims_in.size() = 2 baselims_in.size() 2
+m_lims =	500	3000	2500	
+m_baselims =	0	500	500	
+lims_in.size() = 2 baselims_in.size() 2
+m_lims =	500	3000	2500	
+m_baselims =	0	500	500	
+Exiting the locic_itr for initializing vector<m_aq>
+Started My Job for rank 0
+Started My Run for rank 0
+setting up acqiris file
+filenames = amo86815_data/eb-amo86815-r0069.rank0	amo86815_data/gd-amo86815-r0069.rank0	amo86815_data/xt-amo86815-r0069.rank0	amo86815_data/xt-amo86815-r0069.rank0.valhist	amo86815_data/xt-amo86815-r0069.rank0.stats	amo86815_data/aq_crate0-amo86815-r0069.rank0	
+setting up acqiris file
+amo86815_data/aq_crate1-amo86815-r0069.rank0	
+set up learning fileamo86815_data/learn-amo86815-r0069.rank0
+Started my CalibCycle in rank 0
+skipping	
+skipping	
+skipping	
+skipping	
+skipping	
+skipping	
+skipping	
+skipping	
+skipping	
+skipping	
+==24267== Invalid write of size 4
+==24267==    at 0x9B6833E: CookieBox_pkg::Xtcav::crop_filtered(unsigned int) (in /reg/neh/home1/coffee/analysis_2015/arch/x86_64-rhel5-gcc41-opt/lib/libCookieBox_pkg.so)
+==24267==    by 0x9B39391: CookieBox_pkg::CookieBox_mod::processEvent(PSEvt::Event&, PSEnv::Env&) (in /reg/neh/home1/coffee/analysis_2015/arch/x86_64-rhel5-gcc41-opt/lib/libCookieBox_pkg.so)
+==24267==    by 0x9B39ADA: CookieBox_pkg::CookieBox_mod::event(PSEvt::Event&, PSEnv::Env&) (in /reg/neh/home1/coffee/analysis_2015/arch/x86_64-rhel5-gcc41-opt/lib/libCookieBox_pkg.so)
+==24267==    by 0x6A56DF6: psana::EventLoop::callModuleMethod(void (psana::Module::*)(PSEvt::Event&, PSEnv::Env&), PSEvt::Event&, PSEnv::Env&, bool) (in /reg/g/psdm/sw/releases/ana-0.14.2/arch/x86_64-rhel5-gcc41-opt/lib/libpsana.so)
+==24267==    by 0x6A5874D: psana::EventLoop::next() (in /reg/g/psdm/sw/releases/ana-0.14.2/arch/x86_64-rhel5-gcc41-opt/lib/libpsana.so)
+==24267==    by 0x6A516F0: psana::EventIter::next() (in /reg/g/psdm/sw/releases/ana-0.14.2/arch/x86_64-rhel5-gcc41-opt/lib/libpsana.so)
+==24267==    by 0x6A7660D: psana::PSAnaApp::runApp() (in /reg/g/psdm/sw/releases/ana-0.14.2/arch/x86_64-rhel5-gcc41-opt/lib/libpsana.so)
+==24267==    by 0x7113D6C: AppUtils::AppBase::run(int, char**) (in /reg/g/psdm/sw/releases/ana-0.14.2/arch/x86_64-rhel5-gcc41-opt/lib/libAppUtils.so)
+==24267==    by 0x400E39: main (in /reg/g/psdm/sw/releases/ana-0.14.2/arch/x86_64-rhel5-gcc41-opt/bin/psana)
+==24267==  Address 0x172b387c is 0 bytes after a block of size 36,028 alloc'd
+==24267==    at 0x4C2210C: malloc (vg_replace_malloc.c:195)
+
+

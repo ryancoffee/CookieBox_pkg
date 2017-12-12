@@ -40,6 +40,7 @@ class Gdet
 	public:
 		inline bool use(bool in){m_use = in;return m_use;}
 		inline bool use(void){return m_use;}
+		inline bool filled(void){return m_filled;}				
 		inline bool print(bool in){
 			if (!m_use)
 				return false;
@@ -72,6 +73,7 @@ class Gdet
 
 		inline unsigned bins(Var variable){ return m_bins.at(variable); }
 		inline double value(Var variable, Lim limit){ return m_data.at(limit).at(variable); }
+		inline double value(void){ return m_data.at(current).at(average); }
 		inline unsigned index(Var variable){
 			int i = (int)( m_bins.at(variable) * (m_data.at(current).at(variable) - m_data.at(min).at(variable))
 					/ (m_data.at(max).at(variable) - m_data.at(min).at(variable)) );
@@ -95,7 +97,7 @@ class Gdet
 
 
 	private:
-		bool m_use,m_print,m_print_parallel;
+		bool m_use,m_print,m_print_parallel,m_filled;
 		std::ofstream m_outfile;
 		std::string m_filename;
 
