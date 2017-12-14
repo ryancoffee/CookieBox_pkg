@@ -1350,6 +1350,7 @@ namespace CookieBox_pkg {
 						details += "_g" + boost::lexical_cast<std::string>(g);
 						details += "_l" + boost::lexical_cast<std::string>(l);
 						details += "_b" + boost::lexical_cast<std::string>(b);
+						details += "_tspan" + tspanStr;
 						details += std::string(".dat");
 						filename += details;
 						std::ofstream projout(filename.c_str(),std::ios::out);
@@ -1698,25 +1699,25 @@ namespace CookieBox_pkg {
 			{
 				for ( unsigned c = 0; c < m_data_5d.shape()[3] ; ++c){
 					/*
-					std::string filename = m_datadir + std::string("hist");
-					filename+= "-" + m_str_experiment + "-r" + m_str_runnum;
-					filename += "_e" + boost::lexical_cast<std::string>(e);
-					filename += "_g" + boost::lexical_cast<std::string>(g);
-					filename += "_c" + boost::lexical_cast<std::string>(c);
-					filename += std::string(".dat");
-					*/
-				//std::ofstream outfile(filename.c_str(),std::ios::out);
-				for (unsigned sample = 0; sample < m_data_5d.shape()[4] ; ++sample){
-					for (unsigned t = 0; t < m_data_5d.shape()[0] ; ++t){
-						long long shots=0;
-						double val = 0.;
-						shots = m_shots_4d[t][e][g][c];
-						if ( shots > 0){
-							val = (double) m_data_5d[t][e][g][c][sample];
-							if(sample==0)
-								m_avgSpectra_shots[e][g][c] += shots; // integrate on timebins
-							m_avgSpectra[e][g][c][sample] += m_data_5d[t][e][g][c][sample];
-							val /= shots;
+					   std::string filename = m_datadir + std::string("hist");
+					   filename+= "-" + m_str_experiment + "-r" + m_str_runnum;
+					   filename += "_e" + boost::lexical_cast<std::string>(e);
+					   filename += "_g" + boost::lexical_cast<std::string>(g);
+					   filename += "_c" + boost::lexical_cast<std::string>(c);
+					   filename += std::string(".dat");
+					   */
+					//std::ofstream outfile(filename.c_str(),std::ios::out);
+					for (unsigned sample = 0; sample < m_data_5d.shape()[4] ; ++sample){
+						for (unsigned t = 0; t < m_data_5d.shape()[0] ; ++t){
+							long long shots=0;
+							double val = 0.;
+							shots = m_shots_4d[t][e][g][c];
+							if ( shots > 0){
+								val = (double) m_data_5d[t][e][g][c][sample];
+								if(sample==0)
+									m_avgSpectra_shots[e][g][c] += shots; // integrate on timebins
+								m_avgSpectra[e][g][c][sample] += m_data_5d[t][e][g][c][sample];
+								val /= shots;
 							}
 							//outfile << val << "\t";
 						}
@@ -1730,36 +1731,36 @@ namespace CookieBox_pkg {
 		std::cerr << "Made it here printing" << std::endl;
 		std::cout << "skipping // print difference spectra //" << std::endl;
 		/*
-		for (unsigned e = 0; e<m_data_5d.shape()[1] ; ++e)
-		{
-			for ( unsigned g = 0; g < m_data_5d.shape()[2] ; ++g)
-			{
-				for ( unsigned c = 0; c < m_data_5d.shape()[3] ; ++c){
-					std::string filename = m_datadir + std::string("diffhist");
-					filename+= "-" + m_str_experiment + "-r" + m_str_runnum;
-					filename += "_e" + boost::lexical_cast<std::string>(e);
-					filename += "_g" + boost::lexical_cast<std::string>(g);
-					filename += "_c" + boost::lexical_cast<std::string>(c);
-					filename += std::string(".dat");
-					std::ofstream outfile(filename.c_str(),std::ios::out);
-					for (unsigned sample = 0; sample < m_data_5d.shape()[4] ; ++sample){
-						for (unsigned t = 0; t < m_data_5d.shape()[0] ; ++t){
-							long long shots=0;
-							double result = 0.;
-							shots = m_shots_4d[t][e][g][c];
-							if ( shots > 0){
-								result = (double)m_data_5d[t][e][g][c][sample]/(double)shots;
-								result -= (double)m_avgSpectra[e][g][c][sample]/(double)m_avgSpectra_shots[e][g][c];
-							}
-							outfile << result << "\t";
-						}
-						outfile << "\n";
-					}
-					outfile.close();
-				}
-			}
-		}
-		*/
+		   for (unsigned e = 0; e<m_data_5d.shape()[1] ; ++e)
+		   {
+		   for ( unsigned g = 0; g < m_data_5d.shape()[2] ; ++g)
+		   {
+		   for ( unsigned c = 0; c < m_data_5d.shape()[3] ; ++c){
+		   std::string filename = m_datadir + std::string("diffhist");
+		   filename+= "-" + m_str_experiment + "-r" + m_str_runnum;
+		   filename += "_e" + boost::lexical_cast<std::string>(e);
+		   filename += "_g" + boost::lexical_cast<std::string>(g);
+		   filename += "_c" + boost::lexical_cast<std::string>(c);
+		   filename += std::string(".dat");
+		   std::ofstream outfile(filename.c_str(),std::ios::out);
+		   for (unsigned sample = 0; sample < m_data_5d.shape()[4] ; ++sample){
+		   for (unsigned t = 0; t < m_data_5d.shape()[0] ; ++t){
+		   long long shots=0;
+		   double result = 0.;
+		   shots = m_shots_4d[t][e][g][c];
+		   if ( shots > 0){
+		   result = (double)m_data_5d[t][e][g][c][sample]/(double)shots;
+		   result -= (double)m_avgSpectra[e][g][c][sample]/(double)m_avgSpectra_shots[e][g][c];
+		   }
+		   outfile << result << "\t";
+		   }
+		   outfile << "\n";
+		   }
+		   outfile.close();
+		   }
+		   }
+		   }
+		   */
 
 
 
@@ -1782,10 +1783,10 @@ namespace CookieBox_pkg {
 
 		//for (unsigned e = 0; e<m_data_5d.shape()[1] ; ++e)
 		{
-		unsigned e =  5;
+			unsigned e =  5;
 			//for ( unsigned g = 0; g < m_data_5d.shape()[2] ; ++g)
 			{
-			unsigned g = 1;
+				unsigned g = 1;
 				for ( unsigned c = 0; c < m_data_5d.shape()[3] ; ++c){
 					std::string filename = m_datadir + std::string("fouriers");
 					filename+= "-" + m_str_experiment + "-r" + m_str_runnum;
@@ -1892,28 +1893,32 @@ namespace CookieBox_pkg {
 		/*
 		 * This needs to become for Legendres rather than individual channels
 		 */
-		//for (unsigned e = m_data_5d.shape()[ebind]/4; e<m_data_5d.shape()[ebind]*3/4 ; ++e)
+		std::string tspanStr;
+		double tspanDbl = m_tt.getTspan(tspanStr);
+		for ( unsigned l=0;l<m_legendres_5d.shape()[4];++l)
 		{
-		unsigned e = 5;
-			//for ( unsigned g = 0; g < m_data_5d.shape()[gdind] ; ++g)
-			unsigned g = 1;
+			std::cout << "Writing projections for l = " << l << "\t... " << std::flush;
+			//for (unsigned e = m_data_5d.shape()[ebind]/4; e<m_data_5d.shape()[ebind]*3/4 ; ++e)
 			{
-				//for ( unsigned c = 0; c < m_data_5d.shape()[chanind] ; ++c){
-				for (size_t l = 0; l< m_legendres_5d.shape()[4]; ++l)
-				{ 
-					std::cout << "Writing projections for l = " << l << "\t... " << std::flush;
+				unsigned e = 5;
+				//for ( unsigned g = 0; g < m_data_5d.shape()[gdind] ; ++g)
+				unsigned g = 1;
+				{
 					/*
 					 * HERE HERE HERE HERE
 					 */
 					std::string filename = m_datadir + std::string("projections");
-					filename+= "-" + m_str_experiment + "-r" + m_str_runnum;
-					filename += "_e" + boost::lexical_cast<std::string>(e);
-					filename += "_g" + boost::lexical_cast<std::string>(g);
-					filename += "_l" + boost::lexical_cast<std::string>(l);
-					filename += std::string(".dat");
+					std::string details = "-" + m_str_experiment + "-r" + m_str_runnum;
+					details += "_e" + boost::lexical_cast<std::string>(e);
+					details += "_g" + boost::lexical_cast<std::string>(g);
+					details += "_l" + boost::lexical_cast<std::string>(l);
+					details += "_tspan" + tspanStr;
+					details += std::string(".dat");
+					filename += details;
 					//std::cerr << "printing file " << filename << std::endl;
 					std::ofstream outfile(filename.c_str(),std::ios::out);
-					outfile << "#mean\tprojections ";
+					outfile << "#rotor projections for tspan = " << tspanDbl << "\n";
+					outfile << "#mean\t";
 					//std::cerr << "#mean\tprojections " << "\t header written to file" << std::endl;
 					for(unsigned b=0;b<orthobases.size();++b){
 						outfile << b << "\t";
@@ -1953,17 +1958,16 @@ namespace CookieBox_pkg {
 						//std::cerr << "EXIT EXIT \tk = " << k << std::endl;
 					}
 					outfile << "\n";
-					outfile.close();
 
 					/*
 
-					
+
 					// HERE, I want the FFT of every projection, but for now only the power spectrum.
 					for (unsigned i=0;i<projections_r.size();++i){
-						fftw_execute_r2r(plan_r2hc,
-								projections_r[i],
-								projections_hc[i]
-								);
+					fftw_execute_r2r(plan_r2hc,
+					projections_r[i],
+					projections_hc[i]
+					);
 					}
 					// OK now the printing is silly for sake of gnuplot //
 					filename += ".fft";
@@ -1972,24 +1976,24 @@ namespace CookieBox_pkg {
 					//std::cerr << "printing file " << filename << std::endl;
 					unsigned sample = 0;
 					for (unsigned i=0;i<projections_r.size();++i){
-						fftoutfile << std::norm(std::complex<double>(projections_hc[i][sample],0.));
-						fftoutfile << "\t";
+					fftoutfile << std::norm(std::complex<double>(projections_hc[i][sample],0.));
+					fftoutfile << "\t";
 					}
 					fftoutfile << "\n";
 					for (sample=1;sample<nsamples/2;++sample){
-						for (unsigned i=0;i<projections_r.size();++i){
-							fftoutfile << std::norm(
-								std::complex<double>(
-									projections_hc[i][sample]
-									,projections_hc[i][nsamples - sample]) );
-							fftoutfile << "\t";
-						}
-						fftoutfile << "\n";
+					for (unsigned i=0;i<projections_r.size();++i){
+					fftoutfile << std::norm(
+					std::complex<double>(
+					projections_hc[i][sample]
+					,projections_hc[i][nsamples - sample]) );
+					fftoutfile << "\t";
+					}
+					fftoutfile << "\n";
 					}
 					sample = nsamples/2;
 					for (unsigned i=0;i<projections_r.size();++i){
-						fftoutfile << std::norm(std::complex<double>(projections_hc[i][sample],0.));
-						fftoutfile << "\t";
+					fftoutfile << std::norm(std::complex<double>(projections_hc[i][sample],0.));
+					fftoutfile << "\t";
 					}
 					fftoutfile.close();
 					// OK, now filter and back project and write out //
@@ -1999,13 +2003,13 @@ namespace CookieBox_pkg {
 					// Then apply the weiner 1/(1+n/s) in this new basis also and back transform
 					weinerfilter(projections_hc,nsamples);
 					for (unsigned i=0;i<projections_hc.size();++i){
-						fftw_execute_r2r(plan_hc2r,
-								projections_hc[i],
-								projections_r[i]
-								);
-						double scale(1./(double)nsamples);
-						std::transform(projections_r[i], projections_r[i] + nsamples, projections_r[i], 
-								std::bind1st(std::multiplies<double>(),scale));
+					fftw_execute_r2r(plan_hc2r,
+					projections_hc[i],
+					projections_r[i]
+					);
+					double scale(1./(double)nsamples);
+					std::transform(projections_r[i], projections_r[i] + nsamples, projections_r[i], 
+					std::bind1st(std::multiplies<double>(),scale));
 					}
 					// HERE add the back-projected of the weiner filtered coefficients and see if it matches the diffhist files.
 					filename += ".filtered";
@@ -2013,14 +2017,15 @@ namespace CookieBox_pkg {
 					std::ofstream backfftoutfile(filename.c_str(),std::ios::out);
 					fftoutfile << "#wiener filtered projections back ffts ";
 					for (unsigned sample=0;sample<nsamples;++sample){
-						for (unsigned i=0; i<projections_r.size();++i){
-							backfftoutfile << projections_r[i][sample] << "\t";
-						}
-						backfftoutfile << "\n";
+					for (unsigned i=0; i<projections_r.size();++i){
+					backfftoutfile << projections_r[i][sample] << "\t";
+					}
+					backfftoutfile << "\n";
 					}
 					backfftoutfile.close();
 					*/
 					std::cout << "... written.\n" << std::flush;
+					outfile.close();
 				}
 			}
 		}
