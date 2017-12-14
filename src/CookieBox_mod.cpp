@@ -1141,6 +1141,7 @@ namespace CookieBox_pkg {
 		std::cerr << "\n\tm_legendres_5d.shape()[ "  << ebind << " ]=\t" << m_legendres_5d.shape()[ebind] << "\n" << std::endl;
 		std::cerr << "\n\tm_legendres_5d.shape()[ "  << gdind << " ]=\t" << m_legendres_5d.shape()[gdind] << "\n" << std::endl;
 		std::cerr << "\n\tm_legendres_5d.shape()[ "  << 3 << " ]=\t" << m_legendres_5d.shape()[3] << "\n" << std::endl;
+		std::cerr << "\n\tm_legendres_5d.shape()[ "  << 4 << " ]=\t" << m_legendres_5d.shape()[4] << "\n" << std::endl;
 
 		for (unsigned e = 0; e<m_legendres_5d.shape()[ebind] ; ++e)
 		{
@@ -1898,8 +1899,9 @@ namespace CookieBox_pkg {
 			unsigned g = 1;
 			{
 				//for ( unsigned c = 0; c < m_data_5d.shape()[chanind] ; ++c){
-				for (size_t l = 0; l< m_legendres_5d.shape()[0]; ++l)
+				for (size_t l = 0; l< m_legendres_5d.shape()[4]; ++l)
 				{ 
+					std::cout << "Writing projections for l = " << l << "\t... " << std::flush;
 					/*
 					 * HERE HERE HERE HERE
 					 */
@@ -1918,7 +1920,8 @@ namespace CookieBox_pkg {
 					}
 					outfile << "\n";
 					size_t numenergies = m_legendres_5d.shape()[3];
-					for (size_t k = 0; k< numenergies ; ++k){
+					for (size_t k = 0; k < numenergies ; ++k){
+						//std::cerr << "HERE HERE HERE HERE\tk = " << k << "\t" << std::flush;
 						double mean;
 						unsigned meancontributions = 0;
 						for (unsigned t = 0; t < nsamples ; ++t){
@@ -1926,9 +1929,11 @@ namespace CookieBox_pkg {
 							meancontributions = 0;
 							long long shots=0;
 							double result = 0.;
-							shots = m_shots_4d[t][e][g][k];
+							shots = m_shots_4d[t][e][g][0];
 							if ( shots > 0){
-								result = (double)m_legendres_5d[t][e][g][l][k]/(double)shots;
+								//result = (double)m_legendres_5d[t][e][g][k][l]/(double)shots;
+								result = m_legendres_5d[t][e][g][k][l] ; // slice 1D of the Legendre output
+								//std::cerr << "result = m_legendres_5d[t][e][g][k][l] = " << result << std::endl;
 								mean += result;
 								++meancontributions;
 								//result -= (double)m_avgSpectra[e][g][c][sample]/(double)m_avgSpectra_shots[e][g][c];
@@ -1945,6 +1950,7 @@ namespace CookieBox_pkg {
 							projections_r[b+1][k] = proj; // filling for FFT
 						}
 						outfile << "\n";
+						//std::cerr << "EXIT EXIT \tk = " << k << std::endl;
 					}
 					outfile << "\n";
 					outfile.close();
@@ -2014,6 +2020,7 @@ namespace CookieBox_pkg {
 					}
 					backfftoutfile.close();
 					*/
+					std::cout << "... written.\n" << std::flush;
 				}
 			}
 		}
