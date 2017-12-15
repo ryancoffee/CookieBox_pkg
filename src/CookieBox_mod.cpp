@@ -1898,9 +1898,9 @@ namespace CookieBox_pkg {
 		for ( unsigned l=0;l<m_legendres_5d.shape()[4];++l)
 		{
 			std::cout << "Writing projections for l = " << l << "\t... " << std::flush;
-			//for (unsigned e = m_data_5d.shape()[ebind]/4; e<m_data_5d.shape()[ebind]*3/4 ; ++e)
+			for (unsigned e = m_data_5d.shape()[ebind]/4; e<m_data_5d.shape()[ebind]*3/4+1 ; ++e)
 			{
-				unsigned e = 5;
+				//unsigned e = 5;
 				//for ( unsigned g = 0; g < m_data_5d.shape()[gdind] ; ++g)
 				unsigned g = 1;
 				{
