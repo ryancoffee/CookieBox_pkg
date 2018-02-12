@@ -21,8 +21,8 @@ namespace CookieBox_pkg {
 
 class Acqiris 
 {
-	typedef ndarray<const short,2> shortwf_t;
-	//typedef ndarray<const double,2> shortwt_t;
+	typedef ndarray<const long int,2> wf_t;
+	typedef ndarray<const double,2> wt_t;
 	typedef boost::multi_array_types::index_range ind_range;
 	typedef boost::multi_array<long long,4>::array_view<1>::type a4d_ll_1dview_t;
 	typedef boost::multi_array<long long,4>::array_view<2>::type a4d_ll_2dview_t;
@@ -99,6 +99,12 @@ class Acqiris
 		unsigned m_max_samples;
 		std::vector<unsigned> m_lims;
 		std::vector<unsigned> m_baselims;
+		double m_sampleInterval;
+		m_ntotalsamples = m_ConfigPtr->horiz().nbrSamples();
+
+		// Configuration related
+		std::vector<double> m_vert_slope;
+		std::vector<double> m_vert_offset;
 
 
 		// 	MPI related	//

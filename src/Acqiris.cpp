@@ -195,7 +195,7 @@ namespace CookieBox_pkg
 		}
 
 		for (unsigned chan=0;chan<m_nchannels;++chan){
-			shortwf_t wf = m_srcPtr->data(chan).waveforms(); // the 2D'ness of this is for the unused segments, not the channels.
+			wf_t wf = m_srcPtr->data(chan).waveforms(); // the 2D'ness of this is for the unused segments, not the channels.
 
 			const int segment = 0; // [chris ogrady] always 0 for LCLS data taken so far (a feature of the acqiris we don't use)
 			long long basesum;
@@ -234,11 +234,14 @@ namespace CookieBox_pkg
 		}
 
 		for (unsigned chan=0;chan<m_nchannels;++chan){
-			shortwf_t wf = m_srcPtr->data(chan).waveforms(); // the 2D'ness of this is for the unused segments, not the channels.
+			wf_t wf = m_srcPtr->data(chan).waveforms(); // the 2D'ness of this is for the unused segments, not the channels.
 			// Also, we define it here since as an interface, 
 			// it won't get used elsewhere and therefore should live on the stack.. .not heap as with new .. and delete...
 			// I now also see that since I'm burying the wf type in the function, 
-			// I want something in the .h file where I can tweak the types... thus the typedef ndarray<short,2> shortwf_t;
+			// I want something in the .h file where I can tweak the types... thus the typedef ndarray<short,2> wf_t;
+
+			const Psana::Acqiris::DataDescV1Elem& elem = m_srcPtr->data(chan);
+			wf_t wf = elem.waveforms(); // the 2D'ness of this is for the unused segments, not the channels.
 
 			const int segment = 0; // [chris ogrady] always 0 for LCLS data taken so far (a feature of the acqiris we don't use)
 			long long basesum;
@@ -281,8 +284,15 @@ namespace CookieBox_pkg
 		//std::cerr << "m_data.back().size() = " << m_data.back().size() << std::endl;
 
 		for (unsigned chan=0;chan<m_nchannels;++chan){
+			const size_t segment = 0; // [chris ogrady] always 0 for LCLS data taken so far (a feature of the acqiris we don't use)
+			const Psana::Acqiris::DataDescV1Elem& elem = m_srcPtr->data(chan);
 			//std::cerr << "filling channel " << chan << std::flush;
-			shortwf_t wf = m_srcPtr->data(chan).waveforms(); // the 2D'ness of this is for the unused segments, not the channels.
+			const ndarray<const Psana::Acqiris::TimestampV1, 1>& timestamps = elem.timestamp();
+			double pos = timestamps[segment].pos();
+			int indexFirstPoint = elem.indexFirstPoint();
+			int indoffset = int(pos*2./m_sampleInterval)/2;
+			wf_t wf = elem.waveforms(); 
+			// the 2D'ness of this is for the unused segments, not the channels.
 			// Also, we define it here since as an interface, 
 			// it won't get used elsewhere and therefore should live on the stack.. .not heap as with new .. and delete...
 			// I now also see that since I'm burying the wf type in the function, 
@@ -292,26 +302,35 @@ namespace CookieBox_pkg
 			// Debugging the indices and the clock start time //
 			// here the 0th index can correspond to a time form 0 back to the increment size (.5ns) here 
 			// This means we could sub-divide the waveforms for computing the energy simply by adjusting by this offset.
-	//		doublewt_t wt = m_srcPtr->data(chan).wftime();  // this will fail... 
 	   //const unsigned shape[] = {nbrChannels, nbrSamples};
 	   //    ndarray<wform_t, 2> wf = make_ndarray<wform_t>(nbrChannels, nbrSamples);
 	   //        ndarray<wtime_t, 2> wt = make_ndarray<wtime_t>(nbrChannels, nbrSamples);
 	   //
 
 
-			const int segment = 0; // [chris ogrady] always 0 for LCLS data taken so far (a feature of the acqiris we don't use)
 			long long basesum;
 			basesum = 0;
-	//		double step = std::abs(wt[segment][1] - wt[segment][0]);
-	//		int offset = int(2.*wt[segment][0]/step);
 			for (unsigned s = m_baselims.at(start); s < m_baselims.at(stop);++s){
 				// fill baseline //
-				basesum += wf[segment][s];
+				basesum += wf[segment][s] - m_vert_offset[chan];
 			}
 			//std::cerr << "\t ... got baseline channel " << chan << std::flush;
 			for (unsigned s = 0; s < m_lims.at(bins); ++s) {
-				long int val = (wf[segment][m_lims.at(start) + s] - basesum/m_baselims.at(bins));
-				//long int val = (wf[segment][m_lims.at(start) + s + offset] - basesum/m_baselims.at(bins));
+				//long int val = (wf[segment][m_lims.at(start) + s] - basesum/m_baselims.at(bins));
+				long int val = 0;
+				if (indoffset != 0){
+					if ((s + indoffset > 0 ) && (s + indoffset < m_max_samples)){
+						val = wf[segment][m_lims.at(start) + s + indoffset];
+						val -= m_vert_offset[chan];
+						val -= basesum/m_baselims.at(bins);
+						val -= s*m_vert_slope[chan];
+					}
+				} else {
+					val = wf[segment][m_lims.at(start) + s + indoffset];
+					val -= m_vert_offset[chan];
+					val -= basesum/m_baselims.at(bins);
+					val -= s*m_vert_slope[chan];
+				}
 				if (m_invert)
 					val *= -1;
 				m_data.at(chan).at(s) += val;
@@ -329,6 +348,8 @@ namespace CookieBox_pkg
 		m_ConfigPtr = env.configStore().get(m_srcStr, &m_src);
 		std::stringstream ss;
 		if (m_ConfigPtr != NULL) {
+			const ndarray<const Psana::Acqiris::VertV1, 1>& vert = m_ConfigPtr->vert();
+
 			ss  << "Acqiris::ConfigV1:\n"
 				<< "  nbrBanks="    << m_ConfigPtr->nbrBanks()
 				<< " channelMask="  << m_ConfigPtr->channelMask()
@@ -341,7 +362,6 @@ namespace CookieBox_pkg
 					<< " nbrSegments="            << h.nbrSegments()
 					<< " nbrSamples="             << h.nbrSamples();
 
-				const ndarray<const Psana::Acqiris::VertV1, 1>& vert = m_ConfigPtr->vert();
 				for (unsigned ch = 0; ch < m_ConfigPtr->nbrChannels(); ++ ch) {
 					const Psana::Acqiris::VertV1& v = vert[ch];
 					ss  << "\n  vert(" << ch << "):"
@@ -352,8 +372,28 @@ namespace CookieBox_pkg
 						     << " bandwidth="  << v.bandwidth();
 				}
 			}
+
+			// Put this where all ranks see it.
+			//
 			m_nchannels = m_ConfigPtr->nbrChannels();
 			std::cerr << "m_nchannels = " << m_nchannels << std::endl;
+
+			m_vert_slope.resize(m_nchannels,0.);
+			m_vert_offset.resize(m_nchannels,0.);
+
+			for (c=0 ; c<m_nchannels ; ++c){ // used for correcting even the short int data vactors
+				//const Psana::Acqiris::VertV1& v = vert[c];
+				m_vert_slope[c]  = vert[c].slope();
+				m_vert_offset[c] = vert[c].offset();
+			}
+			/*
+			   const Psana::Acqiris::HorizV1& h = acqConfig->horiz();
+			   double sampInterval = h.sampInterval();
+			   uint32_t nbrSamples = h.nbrSamples();
+			   */
+
+			m_sampleInterval = m_ConfigPtr->horiz().sampleInterval();
+	   
 			m_max_samples = m_ConfigPtr->horiz().nbrSamples();
 			if (m_max_samples < m_lims.at(stop)){
 				m_lims.at(bins) = m_max_samples - m_lims.at(start); // ensure to not over-run
