@@ -395,6 +395,7 @@ namespace CookieBox_pkg {
 		}
 		if (m_aq.front().use()){
 			m_makeRotorProjections = (config("sp_makeRotorProjections",false));
+			m_printRotorResiduals = (config("sp_printRotorResiduals",false));
 			m_printLegendreFFTs = (config("sp_printLegendreFFTs",false));
 			m_gaussroll = (config("sp_rolloff",false));
 			if (m_gaussroll){
@@ -1568,7 +1569,8 @@ namespace CookieBox_pkg {
 						}
 						y[c] += weights.back()*(double)m_data_5d[t][e][g][c][slims.back()];
 					}
-					y[c] /= (double)shots; // HERE HERE HERE HERE Careful, take this back out.
+					//y[c] /= (double)shots; // HERE HERE HERE HERE Careful, take this back out.
+					//HERE HERE HERE HERE  Still not completely sure about this removal of shot normalization.  Maybe because of a rank thing
 					y[c] *= (this->*corr_factor)(k,c);
 					if(k==0 && c == 0)
 						++m_avg_legendres_nsums[e][g];
@@ -1863,6 +1865,9 @@ namespace CookieBox_pkg {
 		size_t nsamples = m_legendres_5d.shape()[0];
 		std::cout << "size_t nsamples = m_legendres_5d.shape()[0]; \t " << nsamples << std::endl;
 		std::vector<double> timeslice(nsamples,0.);
+		std::vector<double> residualslice(nsamples);
+		std::vector<bool> timeslicemask(nsamples,false);
+		size_t removeRotorProjectionsLim = config("sp_removeRotorProjections",4);
 
 		if (orthobases.front().size() > timeslice.size()){
 			std::cout << "condensing orthobases from " << orthobases.front().size() << " to ";
@@ -1904,9 +1909,8 @@ namespace CookieBox_pkg {
 				//for ( unsigned g = 0; g < m_data_5d.shape()[gdind] ; ++g)
 				unsigned g = 1;
 				{
-					/*
-					 * HERE HERE HERE HERE
-					 */
+					
+					// setting up projections file //
 					std::string filename = m_datadir + std::string("projections");
 					std::string details = "-" + m_str_experiment + "-r" + m_str_runnum;
 					details += "_e" + boost::lexical_cast<std::string>(e);
@@ -1915,11 +1919,16 @@ namespace CookieBox_pkg {
 					details += "_tspan" + tspanStr;
 					details += std::string(".dat");
 					filename += details;
-					//std::cerr << "printing file " << filename << std::endl;
 					std::ofstream outfile(filename.c_str(),std::ios::out);
 					outfile << "#rotor projections for tspan = " << tspanDbl << "\n";
 					outfile << "#mean\t";
-					//std::cerr << "#mean\tprojections " << "\t header written to file" << std::endl;
+
+					// Setting up residuals file //
+					filename = m_datadir + std::string("residuals") + details;
+					std::ofstream resifile(filename.c_str(),std::ios::out);
+					resifile << "#residuals after rotor projections removed for tspan = " << tspanDbl << " in " << nsamples << " bins\n";
+					resifile << "#\ttime series vector of residuals, adding back the mean" << std::endl;
+
 					for(unsigned b=0;b<orthobases.size();++b){
 						outfile << b << "\t";
 					}
@@ -1927,37 +1936,40 @@ namespace CookieBox_pkg {
 					size_t numenergies = m_legendres_5d.shape()[3];
 					for (size_t k = 0; k < numenergies ; ++k){
 						//std::cerr << "HERE HERE HERE HERE\tk = " << k << "\t" << std::flush;
-						double mean;
-						unsigned meancontributions = 0;
 						for (unsigned t = 0; t < nsamples ; ++t){
-							mean = 0.;
-							meancontributions = 0;
 							long long shots=0;
 							double result = 0.;
 							shots = m_shots_4d[t][e][g][0];
 							if ( shots > 0){
-								//result = (double)m_legendres_5d[t][e][g][k][l]/(double)shots;
-								result = m_legendres_5d[t][e][g][k][l] ; // slice 1D of the Legendre output
+								timeslicemask[t] = true;
+								result = (double)m_legendres_5d[t][e][g][k][l]/(double)shots;
+								//result = m_legendres_5d[t][e][g][k][l] ; // slice 1D of the Legendre output
 								//std::cerr << "result = m_legendres_5d[t][e][g][k][l] = " << result << std::endl;
-								mean += result;
-								++meancontributions;
 								//result -= (double)m_avgSpectra[e][g][c][sample]/(double)m_avgSpectra_shots[e][g][c];
 							}
 							timeslice[t] = result;
 						}
-						removemean(timeslice); // don't change this... I'm doing a conditional mean removal
-						mean /= meancontributions;
+						double mean = removemean(timeslice,timeslicemask);
 						outfile << mean << "\t" ;
 						projections_r[0][k] = mean;
+						residualslice.assign(timeslice.begin(),timeslice.end());
+
 						for(unsigned b=0;b<orthobases.size();++b){
-							double proj = projection(orthobases[b],timeslice);
+							double proj = projection(orthobases[b],timeslice,timeslicemask);
 							outfile << proj << "\t";
 							projections_r[b+1][k] = proj; // filling for FFT
+							if (b < removeRotorProjectionsLim){// Try not removing all, just the first couple
+								residualslice -= std::vector<double>(proj * orthobases[b]); // remove some of the projections
+							}
 						}
+						residualslice += mean; // add back the mean
 						outfile << "\n";
+						resifile << residualslice << std::endl;
 						//std::cerr << "EXIT EXIT \tk = " << k << std::endl;
 					}
 					outfile << "\n";
+					resifile << "\n";
+					resifile.close();
 
 					/*
 

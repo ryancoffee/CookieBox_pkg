@@ -259,6 +259,10 @@ namespace CookieBox_pkg
 	}
 	bool Acqiris::fill(Event& evt, Env& env)
 	{
+		// HERE HERE HERE //
+		// Using this one //
+		// find a way to get the time-vector start value and step.
+		// Use that to compute an offset
 		m_srcPtr = evt.get(m_srcStr);
 		if (!m_srcPtr.get()){return false;}
 
@@ -284,9 +288,22 @@ namespace CookieBox_pkg
 			// I now also see that since I'm burying the wf type in the function, 
 			// I want something in the .h file where I can tweak the types... thus the typedef ndarray<short,2> shortwf_t;
 
+			// HERE HERE HERE HERE //
+			// Debugging the indices and the clock start time //
+			// here the 0th index can correspond to a time form 0 back to the increment size (.5ns) here 
+			// This means we could sub-divide the waveforms for computing the energy simply by adjusting by this offset.
+	//		doublewt_t wt = m_srcPtr->data(chan).wftime();  // this will fail... 
+	   //const unsigned shape[] = {nbrChannels, nbrSamples};
+	   //    ndarray<wform_t, 2> wf = make_ndarray<wform_t>(nbrChannels, nbrSamples);
+	   //        ndarray<wtime_t, 2> wt = make_ndarray<wtime_t>(nbrChannels, nbrSamples);
+	   //
+
+
 			const int segment = 0; // [chris ogrady] always 0 for LCLS data taken so far (a feature of the acqiris we don't use)
 			long long basesum;
 			basesum = 0;
+	//		double step = std::abs(wt[segment][1] - wt[segment][0]);
+	//		int offset = int(2.*wt[segment][0]/step);
 			for (unsigned s = m_baselims.at(start); s < m_baselims.at(stop);++s){
 				// fill baseline //
 				basesum += wf[segment][s];
@@ -294,6 +311,7 @@ namespace CookieBox_pkg
 			//std::cerr << "\t ... got baseline channel " << chan << std::flush;
 			for (unsigned s = 0; s < m_lims.at(bins); ++s) {
 				long int val = (wf[segment][m_lims.at(start) + s] - basesum/m_baselims.at(bins));
+				//long int val = (wf[segment][m_lims.at(start) + s + offset] - basesum/m_baselims.at(bins));
 				if (m_invert)
 					val *= -1;
 				m_data.at(chan).at(s) += val;

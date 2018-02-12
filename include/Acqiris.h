@@ -22,6 +22,7 @@ namespace CookieBox_pkg {
 class Acqiris 
 {
 	typedef ndarray<const short,2> shortwf_t;
+	//typedef ndarray<const double,2> shortwt_t;
 	typedef boost::multi_array_types::index_range ind_range;
 	typedef boost::multi_array<long long,4>::array_view<1>::type a4d_ll_1dview_t;
 	typedef boost::multi_array<long long,4>::array_view<2>::type a4d_ll_2dview_t;

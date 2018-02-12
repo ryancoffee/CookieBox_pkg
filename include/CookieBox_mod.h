@@ -226,6 +226,7 @@ class CookieBox_mod
 			void weinerfilter(std::vector<double *> & in,const unsigned sz); // used to smooth the projections
 			bool fftDiffSpectra(void);
 			bool m_makeRotorProjections;
+			bool m_printRotorResiduals;
 
 
 			// for exporting to Python plotter module //

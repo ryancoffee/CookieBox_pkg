@@ -250,11 +250,34 @@ namespace CookieBox_pkg {
 			return vec;
 		}
 	template <typename T>
-		std::vector<T>& operator += (std::vector<T>& resvec,std::vector<T>& srcvec)
+		std::vector<T> & operator * (const std::vector<T> & vec,const T val)
+		{
+			std::vector<T> res(vec);	
+			res *= val;
+			return res;
+		}
+	template <typename T>
+		std::vector<T> & operator * (const T val, const std::vector<T>& vec)
+		{
+			std::vector<T> res(vec);	
+			res *= val;
+			return res;
+		}
+	template <typename T>
+		std::vector<T>& operator += (std::vector<T>& resvec,const std::vector<T>& srcvec)
 		{
 			assert(resvec.size() == srcvec.size());
 			for (unsigned i=0;i<resvec.size();++i){
 				resvec[i] += srcvec[i];
+			}
+			return resvec;
+		}
+	template <typename T>
+		std::vector<T>& operator -= (std::vector<T>& resvec,const std::vector<T>& srcvec)
+		{
+			assert(resvec.size() == srcvec.size());
+			for (unsigned i=0;i<resvec.size();++i){
+				resvec[i] -= srcvec[i];
 			}
 			return resvec;
 		}
