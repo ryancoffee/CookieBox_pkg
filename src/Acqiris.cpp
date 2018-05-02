@@ -234,7 +234,7 @@ namespace CookieBox_pkg
 		}
 
 		for (unsigned chan=0;chan<m_nchannels;++chan){
-			wf_t wf = m_srcPtr->data(chan).waveforms(); // the 2D'ness of this is for the unused segments, not the channels.
+			// wf_t wf = m_srcPtr->data(chan).waveforms(); // the 2D'ness of this is for the unused segments, not the channels.
 			// Also, we define it here since as an interface, 
 			// it won't get used elsewhere and therefore should live on the stack.. .not heap as with new .. and delete...
 			// I now also see that since I'm burying the wf type in the function, 
@@ -381,18 +381,16 @@ namespace CookieBox_pkg
 			m_vert_slope.resize(m_nchannels,0.);
 			m_vert_offset.resize(m_nchannels,0.);
 
-			for (c=0 ; c<m_nchannels ; ++c){ // used for correcting even the short int data vactors
+			for (size_t c=0 ; c<m_nchannels ; ++c){ // used for correcting even the short int data vactors
 				//const Psana::Acqiris::VertV1& v = vert[c];
 				m_vert_slope[c]  = vert[c].slope();
 				m_vert_offset[c] = vert[c].offset();
 			}
-			/*
-			   const Psana::Acqiris::HorizV1& h = acqConfig->horiz();
-			   double sampInterval = h.sampInterval();
-			   uint32_t nbrSamples = h.nbrSamples();
-			   */
+			//const Psana::Acqiris::HorizV1& h = m_ConfigPtr->horiz();
+			//double sampInterval = h.sampInterval();
+			//uint32_t nbrSamples = h.nbrSamples();
 
-			m_sampleInterval = m_ConfigPtr->horiz().sampleInterval();
+			m_sampleInterval = m_ConfigPtr->horiz().sampInterval();
 	   
 			m_max_samples = m_ConfigPtr->horiz().nbrSamples();
 			if (m_max_samples < m_lims.at(stop)){

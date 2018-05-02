@@ -1182,7 +1182,10 @@ namespace CookieBox_pkg {
 							std::cerr << "Failed to compute Legendre coefficients and print markusfile" << std::endl;
 							return false;
 						}
-						outfile << m_totsignal_4d[t][e][g][k] << "\t";
+						double sig = m_totsignal_4d[t][e][g][k];
+						//sig /= m_shots_4d[t][e][g][0];
+						//outfile << m_totsignal_4d[t][e][g][k] << "\t";
+						outfile << sig < "\t";
 					}
 					if (m_markusfileLegs.is_open()) { 
 						m_markusfileLegs.close(); 
@@ -1273,6 +1276,7 @@ namespace CookieBox_pkg {
 							unsigned shots = m_shots_4d[t][e][g][0];
 							if (shots > 0){
 								result = m_legendres_5d[t][e][g][k][l] - avg;
+								result /= double(shots);
 							}
 							outfile << result << "\t";
 							timeslice_r[t] = result; 
@@ -1342,7 +1346,7 @@ namespace CookieBox_pkg {
 				avgoutfile.close();
 				// Here we want to print the fft abs and args of the timeslices
 				// now we can print our projection files as maps in e and k
-				if (m_makeRotorProjections)
+				if (m_makeRotorProjections && false ) // killing off this version of printing out the rotor projections.
 				{
 					for (unsigned b=0;b<projections_3d.shape()[0];++b)
 					{
@@ -1569,7 +1573,7 @@ namespace CookieBox_pkg {
 						}
 						y[c] += weights.back()*(double)m_data_5d[t][e][g][c][slims.back()];
 					}
-					//y[c] /= (double)shots; // HERE HERE HERE HERE Careful, take this back out.
+					y[c] /= (double)shots; // HERE HERE HERE HERE Careful, take this back out.
 					//HERE HERE HERE HERE  Still not completely sure about this removal of shot normalization.  Maybe because of a rank thing
 					y[c] *= (this->*corr_factor)(k,c);
 					if(k==0 && c == 0)
@@ -1595,7 +1599,6 @@ namespace CookieBox_pkg {
 				m_totsignal_4d[t][e][g][k] = slice[0] * sum(m_sp_projectionMask);
 				avg_slice[0] += slice[0];
 				for (unsigned l=1;l<slice.size();++l){
-					//slice[l] = std::inner_product(y.begin(),y.end(),m_legendre_vectors[l].begin(),0.);
 					slice[l] = projection(y,m_legendre_vectors[l],m_sp_projectionMask);
 					avg_slice[l] += slice[l];
 					if (m_markusfileLegs.is_open()) { m_markusfileLegs << slice[l] << "\t";}
@@ -1866,8 +1869,9 @@ namespace CookieBox_pkg {
 		std::cout << "size_t nsamples = m_legendres_5d.shape()[0]; \t " << nsamples << std::endl;
 		std::vector<double> timeslice(nsamples,0.);
 		std::vector<double> residualslice(nsamples);
-		std::vector<bool> timeslicemask(nsamples,false);
 		size_t removeRotorProjectionsLim = config("sp_removeRotorProjections",4);
+		size_t minshots_accept = config("sp_minshots_accept",10);
+		
 
 		if (orthobases.front().size() > timeslice.size()){
 			std::cout << "condensing orthobases from " << orthobases.front().size() << " to ";
@@ -1903,7 +1907,8 @@ namespace CookieBox_pkg {
 		for ( unsigned l=0;l<m_legendres_5d.shape()[4];++l)
 		{
 			std::cout << "Writing projections for l = " << l << "\t... " << std::flush;
-			for (unsigned e = m_data_5d.shape()[ebind]/4; e<m_data_5d.shape()[ebind]*3/4+1 ; ++e)
+			//for (unsigned e = m_data_5d.shape()[ebind]/8; e<m_data_5d.shape()[ebind]*7/8+1 ; ++e)
+			for (unsigned e = 0; e<m_data_5d.shape()[ebind]; ++e)
 			{
 				//unsigned e = 5;
 				//for ( unsigned g = 0; g < m_data_5d.shape()[gdind] ; ++g)
@@ -1928,6 +1933,22 @@ namespace CookieBox_pkg {
 					std::ofstream resifile(filename.c_str(),std::ios::out);
 					resifile << "#residuals after rotor projections removed for tspan = " << tspanDbl << " in " << nsamples << " bins\n";
 					resifile << "#\ttime series vector of residuals, adding back the mean" << std::endl;
+					//
+					// Setting up statistics versus time bins file //
+					filename = m_datadir + std::string("shotsPdelay") + details;
+					std::ofstream shotsfile(filename.c_str(),std::ios::out);
+					shotsfile << "#shots per bin for " << tspanDbl << " ps in " << nsamples << " bins\n";
+					std::vector<long int>shotsvec(nsamples,0);
+					std::vector<bool> timeslicemask(nsamples,false);
+
+					for (unsigned t = 0; t < nsamples ; ++t){
+						shotsvec[t] = m_shots_4d[t][e][g][0];
+						timeslicemask[t] = bool(shotsvec[t]>minshots_accept);
+					}
+					shotsfile << "#" << timeslicemask << "\n";
+					shotsfile << shotsvec << "\n" << std::flush;
+					shotsfile.close();
+
 
 					for(unsigned b=0;b<orthobases.size();++b){
 						outfile << b << "\t";
@@ -1937,17 +1958,9 @@ namespace CookieBox_pkg {
 					for (size_t k = 0; k < numenergies ; ++k){
 						//std::cerr << "HERE HERE HERE HERE\tk = " << k << "\t" << std::flush;
 						for (unsigned t = 0; t < nsamples ; ++t){
-							long long shots=0;
-							double result = 0.;
-							shots = m_shots_4d[t][e][g][0];
-							if ( shots > 0){
-								timeslicemask[t] = true;
-								result = (double)m_legendres_5d[t][e][g][k][l]/(double)shots;
-								//result = m_legendres_5d[t][e][g][k][l] ; // slice 1D of the Legendre output
-								//std::cerr << "result = m_legendres_5d[t][e][g][k][l] = " << result << std::endl;
-								//result -= (double)m_avgSpectra[e][g][c][sample]/(double)m_avgSpectra_shots[e][g][c];
+							if ( timeslicemask[t] ){
+								timeslice[t] = m_legendres_5d[t][e][g][k][l] ; // slice 1D of the Legendre output
 							}
-							timeslice[t] = result;
 						}
 						double mean = removemean(timeslice,timeslicemask);
 						outfile << mean << "\t" ;
@@ -1956,7 +1969,8 @@ namespace CookieBox_pkg {
 
 						for(unsigned b=0;b<orthobases.size();++b){
 							double proj = projection(orthobases[b],timeslice,timeslicemask);
-							outfile << proj << "\t";
+							outfile << proj << "\t"; // HERE HERE HERE HERE not getting projections 
+							// also, very IO heavy, sav ethe file writing until later, accumulate values into vectors
 							projections_r[b+1][k] = proj; // filling for FFT
 							if (b < removeRotorProjectionsLim){// Try not removing all, just the first couple
 								residualslice -= std::vector<double>(proj * orthobases[b]); // remove some of the projections
@@ -1967,9 +1981,11 @@ namespace CookieBox_pkg {
 						resifile << residualslice << std::endl;
 						//std::cerr << "EXIT EXIT \tk = " << k << std::endl;
 					}
+
 					outfile << "\n";
 					resifile << "\n";
 					resifile.close();
+					outfile.close();
 
 					/*
 
@@ -2037,7 +2053,6 @@ namespace CookieBox_pkg {
 					backfftoutfile.close();
 					*/
 					std::cout << "... written.\n" << std::flush;
-					outfile.close();
 				}
 			}
 		}

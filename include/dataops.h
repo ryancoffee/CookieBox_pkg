@@ -322,17 +322,21 @@ namespace CookieBox_pkg {
 		{
 			assert(in.size() == mask.size());
 			T ip = T(0);
+			size_t n(0);
 			for (unsigned i=0;i<in.size();++i)
-				if (mask[i]) {ip += (in[i] * in[i]);}
-			assert(ip!=T(0));
-			T scale = T(1)/std::sqrt(ip);
+				if (mask[i]) {
+					ip += (in[i] * in[i]);
+					++n;
+				}
+			assert(ip!=T(0) && n!=0);
+			T scale = std::sqrt(T(n)/ip);
 			std::transform(in.begin(), in.end(), in.begin(), std::bind2nd(std::multiplies<T>(),scale) );
 		}
 	template <typename T>
 		inline void sqr_normalize(std::vector<T> & in) {
 			T scale = sqrt( std::inner_product(in.begin(), in.end(), in.begin(),T(0)) );
 			assert(scale != T(0));
-			std::transform(in.begin(), in.end(), in.begin(), std::bind2nd(std::divides<T>(),scale) );
+			std::transform(in.begin(), in.end(), in.begin(), std::bind2nd(std::multiplies<T>(),T(in.size())/scale) );
 		};
 	template <typename T>
 		inline T removemean(T* in, size_t sz) {
