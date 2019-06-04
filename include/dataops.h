@@ -72,6 +72,21 @@ namespace CookieBox_pkg {
 			vec[i] -= (mean2-mean1)/(x2-x1)*(T(i)-x1) + mean1/T(steps);
 		}
 	}
+	
+	template <typename T>
+	void sin2mask(T * outvec, T * invec, const size_t sz, const T center, const T width)
+	{
+		for (size_t i = 0;i<sz;++i){
+			T x = T(M_PI)*(T(i)-center)/(T(2)*width);
+			if (std::abs(x) > T(1)){
+				outvec[i] = T(0);
+			} else {
+				outvec[i] = invec[i] * std::pow(std::cos(x),int(2));
+			}
+		}
+		return;
+	}
+
 	template <typename T>
 	void sin2roll(T * vec, const size_t sz, const T center, const T width)
 	{

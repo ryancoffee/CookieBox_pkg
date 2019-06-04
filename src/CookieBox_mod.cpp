@@ -65,6 +65,7 @@ namespace CookieBox_pkg {
 		  , m_beginruntime(0)
 		  , m_endruntime(0)
 		  , m_makeRotorProjections(false)
+		  , m_nrolls(1)
 	{
 		// get the values from configuration or use defaults
 		m_printMarkusLegendresCompare = config("printMarkusLegendresCompare",false);
@@ -401,6 +402,10 @@ namespace CookieBox_pkg {
 			if (m_gaussroll){
 				m_gaussroll_center = (config("sp_rolloff_center",360.));
 				m_gaussroll_width = (config("sp_rolloff_width",200.));
+			}
+			m_rollvibration = (config("sp_rollvibration",false));
+			if (m_rollvibration){
+				m_nrolls=config("sp_nrolls",1);
 			}
 			m_use_e2t = config("aq_useEnergyToTime",false);
 			if (m_use_e2t){
@@ -1085,6 +1090,8 @@ namespace CookieBox_pkg {
 		unsigned ncomponents = sz/2;
 		double * timeslice_r = (double *) fftw_malloc(sizeof(double) * sz);
 		double * timeslice_hc = (double *) fftw_malloc(sizeof(double) * sz);
+		double * rollslice_r = (double *) fftw_malloc(sizeof(double) * sz);
+		double * rollslice_hc = (double *) fftw_malloc(sizeof(double) * sz);
 
 		fftw_plan plan_r2hc = fftw_plan_r2r_1d(sz,
 				timeslice_r,
@@ -1203,6 +1210,7 @@ namespace CookieBox_pkg {
 		std::ofstream outabsfile;
 		std::ofstream outargfile;
 		std::ofstream outrealfile;
+		std::vector<std::ofstream * > rollabsfile;
 
 		std::string tlims =  m_tt.getTimeLims();
 		std::string tspanStr;
@@ -1261,6 +1269,16 @@ namespace CookieBox_pkg {
 						//std::cerr << "writing to: " << absfilename << "\t" << argfilename << std::endl;
 						outabsfile.open(absfilename.c_str(),std::ios::out);
 						outargfile.open(argfilename.c_str(),std::ios::out);
+						if (m_rollvibration){
+							std::cout << "Here with " << m_nrolls << "\t...\t" << std::flush;
+							rollabsfile.resize(m_nrolls);
+							for (size_t roll=0;roll<m_nrolls;++roll){
+								std::cout << "setting the .roll_ files" << std::endl;
+								std::string rollfilename(absfilename + ".roll_" + boost::lexical_cast<std::string>(roll));
+								rollabsfile[roll]->open(rollfilename.c_str(),std::ios::out);
+								*(rollabsfile[roll]) << "#fft abs for roll\t" << roll << "\n" << std::flush;
+							}
+						}
 						outabsfile << "#fft abs\n";
 						outargfile << "#fft arg\n";
 						outrealfile.open(realfilename.c_str(),std::ios::out);
@@ -1289,8 +1307,41 @@ namespace CookieBox_pkg {
 						{ 
 							detrend(timeslice_r,sz);
 							if (m_gaussroll){
-							//	gaussroll(timeslice_r,sz,m_gaussroll_center,m_gaussroll_width);
+								//	gaussroll(timeslice_r,sz,m_gaussroll_center,m_gaussroll_width);
 								sin2roll(timeslice_r,sz,m_gaussroll_center,m_gaussroll_width);
+							}
+							if (m_rollvibration){
+								std::complex<double> z;
+								/*
+								 *
+								 * Here, fill a matrix that is sz long by nrolls tall
+								 * FFTW along the rows
+								 * The output should be the rownumber that gave the highest power in the vibrational band of 25 fs.
+								 * And then the corresponding power spectrum.
+								 * 
+								 */
+
+								for (size_t roll=0;roll<m_nrolls;++roll){
+									double center = (double)(roll * (sz/m_nrolls));
+									double width = (double)(sz/m_nrolls);
+
+									sin2mask(rollslice_r,timeslice_r,sz,center,width);
+
+
+									fftw_execute_r2r(plan_r2hc,
+											rollslice_r,
+											rollslice_hc
+											);
+									z = std::complex<double>(rollslice_hc[0],0.0);
+									*(rollabsfile[roll]) << std::abs(z) << "\t";
+									for(unsigned f=1;f<sz/2;++f){
+										z = std::complex<double>(timeslice_hc[f],timeslice_hc[sz-f]);
+										*(rollabsfile[roll]) << std::abs(z) << "\t";
+									}
+									z = std::complex<double>(0.0,timeslice_hc[sz/2]);
+									*(rollabsfile[roll]) << std::abs(z) << "\n";
+
+								}
 							}
 							fftw_execute_r2r(plan_r2hc,
 									timeslice_r,
@@ -1340,6 +1391,11 @@ namespace CookieBox_pkg {
 						if (outabsfile.is_open()) {outabsfile.close();}
 						if (outargfile.is_open()) {outargfile.close();}
 						if (outrealfile.is_open()) {outrealfile.close();}
+						if (m_rollvibration){
+							for (size_t roll=0;roll<m_nrolls;++roll){
+								if (rollabsfile[roll]->is_open()) { rollabsfile[roll]->close();}
+							}
+						}
 					}
 					avgoutfile << "\n";
 				} // end e-loop
@@ -1799,7 +1855,8 @@ namespace CookieBox_pkg {
 					filename += "_g" + boost::lexical_cast<std::string>(g);
 					filename += "_c" + boost::lexical_cast<std::string>(c);
 					filename += std::string(".dat");
-					std::ofstream outfile(filename.c_str(),std::ios::out);
+					std::ofstream outfile;
+					outfile.open(filename.c_str(),std::ios::out);
 					outfile << "#fft real(tab)imag ";
 					outfile << "#fft meanspect\tresidualmean\treal(tab)imag ";
 					for(unsigned f=0;f<ncomponents;++f){
@@ -1906,7 +1963,7 @@ namespace CookieBox_pkg {
 		double tspanDbl = m_tt.getTspan(tspanStr);
 		for ( unsigned l=0;l<m_legendres_5d.shape()[4];++l)
 		{
-			std::cout << "Writing projections for l = " << l << "\t... " << std::flush;
+			//std::cout << "Writing projections for l = " << l << "\t... " << std::flush;
 			//for (unsigned e = m_data_5d.shape()[ebind]/8; e<m_data_5d.shape()[ebind]*7/8+1 ; ++e)
 			for (unsigned e = 0; e<m_data_5d.shape()[ebind]; ++e)
 			{
@@ -1924,8 +1981,10 @@ namespace CookieBox_pkg {
 					details += "_tspan" + tspanStr;
 					details += std::string(".dat");
 					filename += details;
-					std::ofstream outfile(filename.c_str(),std::ios::out);
-					outfile << "#rotor projections for tspan = " << tspanDbl << "\n";
+					std::ofstream outfile;
+					outfile.open(filename.c_str(),std::ios::out);
+					//std::cout << "writing to file " << filename << std::endl;
+					outfile << "#rotor projections for tspan = " << tspanDbl << "\n" << std::flush;
 					outfile << "#mean\t";
 
 					// Setting up residuals file //
@@ -2051,8 +2110,8 @@ namespace CookieBox_pkg {
 					backfftoutfile << "\n";
 					}
 					backfftoutfile.close();
-					*/
 					std::cout << "... written.\n" << std::flush;
+					*/
 				}
 			}
 		}

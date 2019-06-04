@@ -38,7 +38,7 @@ namespace CookieBox_pkg{
 	, m_npowers(1)
 	{
 		m_samplecodes = new std::ofstream("samplecodes.out",std::ios::out);
-		(*m_samplecodes) << "# opeining file initially" << std::endl;
+		(*m_samplecodes) << "# opening file initially" << std::endl;
 		m_samplecodes->close();
 		m_records_r.resize(m_nderivs+1,(double*)NULL);
 		m_records_hc.resize(m_nderivs+1,(double*)NULL);

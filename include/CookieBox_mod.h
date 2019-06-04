@@ -282,6 +282,8 @@ class CookieBox_mod
 			bool m_printLegendreFFTs;
 			double m_gaussroll_center,m_gaussroll_width;
 			bool m_gaussroll;
+			bool m_rollvibration;
+			size_t m_nrolls;
 
 			bool m_printMarkusLegendresCompare;
 			std::ofstream m_markusfileChans;
