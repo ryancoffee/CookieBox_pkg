@@ -50,7 +50,7 @@
 #include "CookieBox_pkg/Gdet.h"
 #include "CookieBox_pkg/Ebeam.h"
 #include "CookieBox_pkg/TimeTool.h"
-#include "CookieBox_pkg/TransAbs.h"
+//#include "CookieBox_pkg/TransAbs.h"
 #include "CookieBox_pkg/Learning.h"
 #include "CookieBox_pkg/dataops.h"
 
@@ -187,7 +187,7 @@ class CookieBox_mod
 			TimeTool m_tt;
 			Gdet m_gd;
 			Xtcav m_xt;
-			TransAbs m_ta;
+			//TransAbs m_ta;
 			std::vector<Acqiris> m_aq;
 			Learning m_learn;
 
@@ -277,7 +277,7 @@ class CookieBox_mod
 			std::vector< std::vector< double > > m_e2t_data;
 			bool m_use_e2t;
 			std::vector< std::map< double, double > > m_corr_factors_maps;
-			bool m_adjustTransmission;
+			//bool m_adjustTransmission;
 			bool m_legendreVecs_filled;
 			bool m_printLegendreFFTs;
 			double m_gaussroll_center,m_gaussroll_width;

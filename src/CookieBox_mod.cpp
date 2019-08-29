@@ -522,6 +522,7 @@ namespace CookieBox_pkg {
 			return false; 
 		}
 		
+		/*
 		if (m_ta.use())
 		{ 
 			if ((m_ta.remove_dark() || m_ta.write_dark()) && !m_ta.fill(evt,env) ){
@@ -529,6 +530,7 @@ namespace CookieBox_pkg {
 				return false;
 			}
 		}
+		*/
 
 		// Order matters here.  fill, then process, then runstats...
 		if ( m_xt.use() && !(	m_xt.fill(evt,env) 
@@ -600,11 +602,13 @@ namespace CookieBox_pkg {
 		}
 
 		if ( sampleevery(m_print_every)  ){
+			/*
 			if (m_ta.use() && m_ta.print() ){
 				if ( !( m_ta.print_out(m_count_event.at(m_rank)))){
 					std::cerr << "Failed to print TransAbs for shot " << m_count_event.at(m_rank) << std::endl;	
 				}
 			}
+			*/
 			if (m_xt.use() && m_xt.print() ){
 				if ( !(	m_xt.print_out( m_count_event.at(m_rank) ) 
 					&& m_xt.print_filtered(m_count_event.at(m_rank)) 
@@ -740,6 +744,8 @@ namespace CookieBox_pkg {
 		// OK, now we need t collect with an MPI::Reduce all the ranks m_ta.m_data_accum, m_data_accum_ref, m_shots_accum, and m_shots_accum_ref
 		// we will try to make m_data_accum and it's partners private, but friend them to CookieBox... if this fails, then public them.
 		std::cerr << "made it into void CookieBox_mod::endCalibCycle(Event& evt, Env& env)" << std::endl;
+		std::cerr << "commented out anything to do twith TransAbs for now" << std::endl;
+		/*
 		if (m_ta.use() && (m_ta.remove_dark() || ( m_ta.in_dark_stage_list() && m_ta.write_dark() ) ) ){
 		if (m_rank == m_root_rank){
 			if (m_ta.m_data_accum[m_ta.m_accum_index]->num_elements() > 0  
@@ -830,6 +836,7 @@ namespace CookieBox_pkg {
 				return;
 			}
 		}
+		*/
 		return;
 	}
 
