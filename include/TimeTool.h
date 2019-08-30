@@ -43,7 +43,7 @@ class TimeTool
 		bool testvalid_surf(void);
 		bool inslicewin(void);
 		bool inslicewin(const double gdin);
-		bool isref(Event& evt,Env& env);
+		//bool isref(Event& evt,Env& env);
 
 	public:
 		inline bool use(bool in){m_use = in; return m_use;}

@@ -107,6 +107,7 @@ namespace CookieBox_pkg {
 		// HERE this is starting the TrasAbs object //
 		logic_itr = use_logic.begin() + use_ta;
 		print_itr = print_logic.begin() + print_ta;
+		/*
 		if (m_ta.use(*logic_itr)){
 			m_ta.init();
 			m_ta.srcStr(configSrc("ta_source","AmoEndstation-1|Opal1000-0"));
@@ -131,6 +132,7 @@ namespace CookieBox_pkg {
 			}
 
 		}
+		*/
 
 
 		logic_itr = use_logic.begin() + use_gd;
@@ -317,12 +319,14 @@ namespace CookieBox_pkg {
 			if (m_rank == m_root_rank) std::cout << filename << "\t";
 		}
 
+		/*
 		if (m_ta.print()){
 			filename = m_datadir + configStr("fname_ta_prefix",  "ta") + "-" + m_str_experiment + "-r" + m_str_runnum + ranktail.str();
 			m_ta.open_file( filename );
 			m_ta.print_header();
 			if (m_rank == m_root_rank) std::cout << filename << "\t";
 		}
+		*/
 
 		if (m_xt.print() || m_xt.print_avg() ){
 			filename = m_datadir + configStr("fname_xt_prefix",  "xt") + "-" + m_str_experiment + "-r" + m_str_runnum + ranktail.str();
@@ -445,6 +449,7 @@ namespace CookieBox_pkg {
 	{
 		m_rank = MPI::COMM_WORLD.Get_rank();
 		std::cout << "Started my CalibCycle in rank " << m_rank << std::endl;
+		/*
 		if (m_ta.use()){
 			const EpicsStore& estore = env.epicsStore();
 			const std::string& value = estore.value("AMO:LAS:DLS:05:MTR.RBV", 0);
@@ -452,6 +457,7 @@ namespace CookieBox_pkg {
 			std::cout << "passing out of beginCalibCycle() in rank " << m_rank ;
 			std::cout << "\t with m_ta.m_accum_index = " << m_ta.m_accum_index << std::endl;
 		}
+		*/
 	}
 	//
 	/// Method which is called with event data, this is the only required 
@@ -850,10 +856,10 @@ namespace CookieBox_pkg {
 		if ( m_ta.use() && m_ta.print_avg() ){
 			std::cerr << "Failed to print TransAbs average" << std::endl;
 		}
-		*/
 		if (m_ta.use() && m_ta.write_dark() && !m_ta.write_dark_file()){
 			std::cerr << "Failing to m_ta.write_dark_file()" << std::endl;
 		}
+		*/
 		if ( m_xt.use() && m_xt.print_avg() && ! m_xt.print_out_avg()){
 			std::cerr << "Failed to print Xtcav average" << std::endl;
 		}
@@ -919,8 +925,10 @@ namespace CookieBox_pkg {
 			m_eb.close_file();
 		if (m_tt.print())
 			m_tt.close_file();
+			/*
 		if (m_ta.print())
 			m_ta.close_file();
+			*/
 		if (m_xt.print())
 			m_xt.close_file();
 		if (m_gd.print())

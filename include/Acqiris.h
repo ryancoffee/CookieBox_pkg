@@ -31,7 +31,7 @@ class Acqiris
 	public:
 		enum LimsInd {start,stop,bins};
 		Acqiris (void);
-		Acqiris (std::vector<size_t>& lims_in , std::vector<size_t>& baselims_in);
+		Acqiris (std::vector<unsigned>& lims_in , std::vector<unsigned>& baselims_in);
 		~Acqiris(void);
 		Acqiris( const Acqiris & rhs);
 		Acqiris & operator=( Acqiris rhs );
@@ -42,7 +42,7 @@ class Acqiris
 
 
 	public:
-		bool init( std::vector<size_t>& lims_in, std::vector<size_t>& baselims_in);
+		bool init( std::vector<unsigned>& lims_in, std::vector<unsigned>& baselims_in);
 
 		inline bool use(bool in){m_use = in;return m_use;}
 		inline bool use(void){return m_use;}
@@ -60,14 +60,14 @@ class Acqiris
 		}
 		inline bool invert(void){return m_invert;}
 		inline bool invert(bool in){m_invert = in;return m_invert;}
-		bool print_out(const size_t eventnum);
+		bool print_out(const unsigned eventnum);
 		bool print_out(void);
 		void print_header(void);
 		void open_file( std::string & filename );
 		void close_file( void );
 		std::string & printname(void);
 		void evtput(Event& evt, Env& env);
-		void evtput(Event& evt, Env& env, const size_t chan);
+		void evtput(Event& evt, Env& env, const unsigned chan);
 
 		bool fill(Event& evt, Env& env, a5d_ll_2dview_t & slice, a4d_ll_1dview_t & shotslice);
 		bool fill(Event& evt, Env& env, a4d_ll_2dview_t & slice);
@@ -76,8 +76,8 @@ class Acqiris
 
 		void srcStr(Source srcStr_in);
 
-		inline size_t nchannels(void){return m_nchannels;}
-		inline size_t nsamples(void){return m_lims.at(bins);}
+		inline unsigned nchannels(void){return m_nchannels;}
+		inline unsigned nsamples(void){return m_lims.at(bins);}
 		std::string getConfig(Env& env);
 
 	protected:
@@ -96,10 +96,10 @@ class Acqiris
 
 		std::vector< std::vector<long int> > m_data;
 
-		size_t m_nchannels;
-		size_t m_max_samples;
-		std::vector<size_t> m_lims;
-		std::vector<size_type> m_baselims;
+		unsigned m_nchannels;
+		unsigned m_max_samples;
+		std::vector<unsigned> m_lims;
+		std::vector<unsigned> m_baselims;
 		double m_sampleInterval;
 
 		// Configuration related
@@ -108,8 +108,8 @@ class Acqiris
 
 
 		// 	MPI related	//
-		size_t m_root_rank,m_rank;
-		size_t m_mpi_size;
+		unsigned m_root_rank,m_rank;
+		unsigned m_mpi_size;
 };
 
 } // namespace CookieBox_pkg

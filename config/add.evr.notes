@@ -1,0 +1,5 @@
+Ah, I didn’t notice it had been commented out.  I uncommented it and was able to compile by adding this include:
+
+#include "psddl_psana/evr.ddl.h"
+
+chris

@@ -344,10 +344,15 @@ namespace CookieBox_pkg{
 		m_outfile << "#eventnum\tindex(pos)\tindex(delay)\tpos\tamp\twidth\tdelay";
 		m_outfile << "\n";
 	}
+	/*
 	bool TimeTool::isref(Event& evt,Env& env)
 	{
+		//shared_ptr<auto> srcPtr = evt.get(m_evr_src);
 		shared_ptr<Psana::EvrData::DataV3> srcPtr = evt.get(m_evr_src);
+		//auto srcPtr = evt.get(m_evr_src);
+		//ndarray<const auto, 1> eventList = srcPtr->fifoEvents();
 		ndarray<const Psana::EvrData::FIFOEvent, 1> eventList = srcPtr->fifoEvents();
+		//auto eventList = srcPtr->fifoEvents();
 		try{
 			//(*m_samplecodes) << "eventList[ ] = ";
 			for (unsigned i=0;i<eventList.size();++i){
@@ -364,5 +369,6 @@ namespace CookieBox_pkg{
 		}
 		return true;
 	}
+	*/
 }
 

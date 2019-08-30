@@ -11,7 +11,7 @@ using namespace CookieBox_pkg;
 
 namespace CookieBox_pkg 
 {
-	Acqiris::Acqiris(std::vector<size_t>& lims_in , std::vector<size_t>& baselims_in)
+	Acqiris::Acqiris(std::vector<unsigned>& lims_in , std::vector<unsigned>& baselims_in)
 	: m_getConfig(true)
 	, m_use(false)
 	, m_print(false)
@@ -110,16 +110,16 @@ namespace CookieBox_pkg
 	}
 
 
-	bool Acqiris::init( std::vector<size_t>& lims_in
-			, std::vector<size_t>& baselims_in)
+	bool Acqiris::init( std::vector<unsigned>& lims_in
+			, std::vector<unsigned>& baselims_in)
 	{
 		std::cerr << "lims_in.size() = " << lims_in.size() << " baselims_in.size() " << baselims_in.size() << std::endl;
 		if (! ( lims_in.size() == baselims_in.size() &&  lims_in.size() == 2 ) ){
 			std::cerr << "Failed sizes in Acqiris::init() method " << std::endl;
 			return false;
 		}
-		//std::vector<size_t>::iterator itr = lims_in.begin();
-		//std::vector<size_t>::iterator itr_base = baselims_in.begin();
+		//std::vector<unsigned>::iterator itr = lims_in.begin();
+		//std::vector<unsigned>::iterator itr_base = baselims_in.begin();
 		m_lims = lims_in;
 		m_baselims = baselims_in;
 
@@ -140,15 +140,15 @@ namespace CookieBox_pkg
 		m_srcStr = srcStr_in;
 	}
 	
-	void Acqiris::evtput(Event& evt, Env& env, const size_t chan)
+	void Acqiris::evtput(Event& evt, Env& env, const unsigned chan)
 	{
 		// use something like a 2d ndarray to pass including the chan bins to python
 		std::string outkey("aq_");
 		outkey += boost::lexical_cast<std::string>(chan);
-		size_t shape[] = {m_data[chan].size()};
+		unsigned shape[] = {m_data[chan].size()};
 		boost::shared_ptr< ndarray<double,1> > outmatPtr = boost::make_shared < ndarray<double,1> > ( shape );
 
-		for (size_t j=0;j<m_data[chan].size();++j){
+		for (unsigned j=0;j<m_data[chan].size();++j){
 			(*outmatPtr)[j] = m_data[chan][j];
 		}
 		evt.put(outmatPtr,outkey);
@@ -159,7 +159,7 @@ namespace CookieBox_pkg
 
 		std::string outkey("aq_allchans");
 
-		size_t shape[] = {m_data.size(), m_data[0].size()};
+		unsigned shape[] = {m_data.size(), m_data[0].size()};
 		boost::shared_ptr< ndarray<double,2> > outmatPtr = boost::make_shared < ndarray<double,2> > ( shape );
 
 		for (unsigned i = 0; i < m_data.size();++i){ 
@@ -209,7 +209,7 @@ namespace CookieBox_pkg
 				if (m_invert)
 					val *= -1;
 				slice[chan][s] += val;
-				m_data.at(chan).at(s) += val;
+				m_data.at(chan).at(s) = val;
 			}
 			++shotslice[chan]; 
 		}
@@ -255,7 +255,7 @@ namespace CookieBox_pkg
 				if (m_invert)
 					val *= -1;
 				slice[chan][s] += val;
-				m_data.at(chan).at(s) += val;
+				m_data.at(chan).at(s) = val;
 			}
 		}
 		return true;
@@ -284,7 +284,7 @@ namespace CookieBox_pkg
 		//std::cerr << "m_data.back().size() = " << m_data.back().size() << std::endl;
 
 		for (unsigned chan=0;chan<m_nchannels;++chan){
-			const size_t segment = 0; // [chris ogrady] always 0 for LCLS data taken so far (a feature of the acqiris we don't use)
+			const unsigned segment = 0; // [chris ogrady] always 0 for LCLS data taken so far (a feature of the acqiris we don't use)
 			const Psana::Acqiris::DataDescV1Elem& elem = m_srcPtr->data(chan);
 			//std::cerr << "filling channel " << chan << std::flush;
 			const ndarray<const Psana::Acqiris::TimestampV1, 1>& timestamps = elem.timestamp();
@@ -302,7 +302,7 @@ namespace CookieBox_pkg
 			// Debugging the indices and the clock start time //
 			// here the 0th index can correspond to a time form 0 back to the increment size (.5ns) here 
 			// This means we could sub-divide the waveforms for computing the energy simply by adjusting by this offset.
-	   //const size_t shape[] = {nbrChannels, nbrSamples};
+	   //const unsigned shape[] = {nbrChannels, nbrSamples};
 	   //    ndarray<wform_t, 2> wf = make_ndarray<wform_t>(nbrChannels, nbrSamples);
 	   //        ndarray<wtime_t, 2> wt = make_ndarray<wtime_t>(nbrChannels, nbrSamples);
 	   //
@@ -333,7 +333,7 @@ namespace CookieBox_pkg
 				}
 				if (m_invert)
 					val *= -1;
-				m_data.at(chan).at(s) += val;
+				m_data.at(chan).at(s) = val;
 			}
 			//std::cerr << "\t ... filled channel " << chan << std::endl;
 		}
@@ -381,7 +381,7 @@ namespace CookieBox_pkg
 			m_vert_slope.resize(m_nchannels,0.);
 			m_vert_offset.resize(m_nchannels,0.);
 
-			for (size_t c=0 ; c<m_nchannels ; ++c){ // used for correcting even the short int data vactors
+			for (unsigned c=0 ; c<m_nchannels ; ++c){ // used for correcting even the short int data vactors
 				//const Psana::Acqiris::VertV1& v = vert[c];
 				m_vert_slope[c]  = vert[c].slope();
 				m_vert_offset[c] = vert[c].offset();
@@ -412,7 +412,7 @@ namespace CookieBox_pkg
 		if (m_outfile.is_open())
 			m_outfile.close();
 	}
-	bool Acqiris::print_out(const size_t eventnum)
+	bool Acqiris::print_out(const unsigned eventnum)
 	{
 		std::string eventfilename(m_filename);
 		eventfilename += ".event_" + boost::lexical_cast<std::string>(eventnum);

@@ -1,0 +1,98 @@
+#!/bin/bash
+
+## ./cookiebatch.mpidrive
+## this script should load the jobs to batch given some params and a list of integers (runs to be submitted)
+
+#Set Script Name variable
+SCRIPT=`basename ${BASH_SOURCE[0]}`
+
+#bsub -q psnehq -a mympi -n 2 -o $logname python mpi_driver.py -n 100 -c psana_cookiebox.cfg exp=$expnum:run=$runnum
+#
+## initializing the variables in case they don't get set in flags.
+expnum="amoi0314"
+runlist=(154)
+noe=100 # set to 0 to run all shots
+numcores=12 #24 # set to a multiple of 12 since each node has 12 cores
+logname="cookie.log"
+configfile="psana_tumbling.cfg"
+queue="psnehq"
+datadir="tempdata"
+
+#Set fonts for Help.
+NORM=`tput sgr0`
+BOLD=`tput bold`
+REV=`tput smso`
+#Help function
+function HELP {
+	echo -e \\n"Help documentation for ${BOLD}${SCRIPT}.${NORM}"\\n
+	echo -e "${REV}Basic usage:${NORM} ${BOLD}$SCRIPT [opts] <<space separated list of run numbers>>${NORM}"\\n
+	echo "Command line switches are optional. The following switches are recognized."
+	echo "${REV}-d${NORM}  --Sets the data dir for option ${BOLD}d${NORM}. Default is ${BOLD}tempdata${NORM}, set -n 0 to get all shots."
+	echo "${REV}-n${NORM}  --Sets the num events for option ${BOLD}n${NORM}. Default is ${BOLD}100${NORM}, set -n 0 to get all shots."
+	echo "${REV}-o${NORM}  --Sets the logfile for option ${BOLD}o${NORM}. Default is ${BOLD}cookie.log${NORM}."
+	echo "${REV}-c${NORM}  --Sets the configfile for option ${BOLD}c${NORM}. Default is ${BOLD}psana_cookiebox.cfg${NORM}."
+	echo "${REV}-e${NORM}  --Sets the expnum for option ${BOLD}e${NORM}. Default is ${BOLD}amoi0314${NORM}."
+	echo "${REV}-s${NORM}  --Sets the numcores (2,4,multiples of 12) for option ${BOLD}s${NORM}. Default is ${BOLD}12${NORM}."
+	echo "${REV}-q${NORM}  --Sets the batchq for option ${BOLD}q${NORM}. Default is ${BOLD}psnehq${NORM}."
+	echo -e "${REV}-h${NORM}  --Displays this help message. No further functions are performed."\\n
+	echo -e "Example: ${BOLD}$SCRIPT -q psanaq -n 100 -o some.log -c psana.cfg -e amoi0314 -s numcores [list of int runnums, space separated]${NORM}"\\n
+	exit 1
+}
+
+#Check the number of arguments. If none are passed, print help and exit.
+NUMARGS=$#
+echo -e \\n"Number of arguments: $NUMARGS"
+if [ $NUMARGS -eq 0 ]; then
+	HELP
+fi
+
+while getopts ":n:o:c:s:e:d:" opt; do
+	case $opt in
+		d) # number of events per run
+		echo "-d (datadir) was triggered with $OPTARG" >&2
+		datadir=$OPTARG
+		;;
+		n) # number of events per run
+		echo "-n (numevents) was triggered with $OPTARG" >&2
+		noe=$OPTARG
+		;;
+		o) # logfile base
+		echo "-o (logfile base) was triggered with $OPTARG" >&2
+		logfile=$OPTARG
+		;;
+		e) # experiment number
+		expnum=$OPTARG
+		echo "-e (expname) was triggered with $OPTARG" >&2
+		;;
+		s) # size of mpi distribution
+		numcores=$OPTARG
+		echo "-s (MPI::size) was triggered with $OPTARG" >&2
+		;;
+		c) # config file
+		configfile=$OPTARG
+		echo "-c (psana*.cfg file) was triggered with $OPTARG" >&2
+		;;
+		q) # batch q
+		queue=psnehq
+		echo "-q (batch q) was triggered with $OPTARG" >&2
+		;;
+		h)
+		echo "-h was triggered" >&2
+		HELP
+		;;
+		\?)
+		echo "Invalid option: -$OPTARG" >&2
+		HELP
+		;;
+	esac
+done
+
+export datadir
+shift $((OPTIND-1)) # i believe this moves the argv start pointer to the next position
+runlist=("$@")
+
+for runnum in ${runlist[@]}; do
+	tstamp_logname="${logname}.${runnum}.$(date +%Y%m%d-%H%M)"
+	bsub -q $queue -a mympi -n $numcores -o $tstamp_logname python mpi_driver.py -c $configfile -n $noe exp=$expnum:run=$runnum
+done
+
