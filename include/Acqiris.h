@@ -40,7 +40,7 @@ class Acqiris
 		void swap(Acqiris & a, Acqiris & b);
 		void deepcopy_data(const Acqiris & b);
 
-		bool fancyfilter(void);
+		bool fancyfill(Event& evt, Env& env, a5d_ll_2dview_t & slice, a4d_ll_1dview_t & shotslice)
 
 
 	public:
@@ -85,6 +85,11 @@ class Acqiris
 	protected:
 
 	private:
+		double * wf_y = (double *) fftw_malloc(sizeof(double) * sz);
+		double * wf_ddy = (double *) fftw_malloc(sizeof(double) * sz);
+		double * wf_Y_hc = (double *) fftw_malloc(sizeof(double) * sz);
+		double * wf_DDY_hc = (double *) fftw_malloc(sizeof(double) * sz);
+
 		bool m_use,m_print,m_invert;
 		std::ofstream m_outfile;
 		std::string m_filename;

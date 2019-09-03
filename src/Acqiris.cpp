@@ -18,6 +18,11 @@ namespace CookieBox_pkg
 	, m_nchannels(1)
 	{
 		init(lims_in,baselims_in);
+		size_t sz = m_lims.at(bins);
+		wf_y = (double *) fftw_malloc(sizeof(double) * sz);
+		wf_ddy = (double *) fftw_malloc(sizeof(double) * sz);
+		wf_Y_hc = (double *) fftw_malloc(sizeof(double) * sz);
+		wf_DDY_hc = (double *) fftw_malloc(sizeof(double) * sz);
 	}
 
 	Acqiris::Acqiris(void)
@@ -32,10 +37,15 @@ namespace CookieBox_pkg
 	{
 		if (m_outfile.is_open())
 			m_outfile.close();
+		fftw_free(wf_y);
+		fftw_free(wf_ddy);
+		fftw_free(wf_Y_hc);
+		fftw_free(wf_DDY_hc);
 	}
 	Acqiris & Acqiris::operator=( Acqiris rhs ){ // the compiler is making a pass by copy here //
 		swap(*this,rhs); // using the swap makes this exception safe... 
 		return *this;
+		size_t sz = m_lims.at(bins);
 	}
 
 	Acqiris::Acqiris(const Acqiris & b)
@@ -57,6 +67,24 @@ namespace CookieBox_pkg
 			m_baselims[i] = b.m_baselims[i];
 
 		this->m_data = b.m_data; 
+
+		size_t sz = m_lims.at(bins);
+		wf_y = (double *) fftw_malloc(sizeof(double) * sz);
+		wf_ddy = (double *) fftw_malloc(sizeof(double) * sz);
+		wf_Y_hc = (double *) fftw_malloc(sizeof(double) * sz);
+		wf_DDY_hc = (double *) fftw_malloc(sizeof(double) * sz);
+		fftw_plan plan_r2hc = fftw_plan_r2r_1d(sz,
+				wf_y,
+				wf_Y,
+				FFTW_R2HC,
+				FFTW_MEASURE
+				);
+		fftw_plan plan_hc2r = fftw_plan_r2r_1d(sz,
+				wf_Y_hc,
+				wf_y,
+				FFTW_HC2R,
+				FFTW_MEASURE
+				);
 
 		if (m_print){
 			m_filename += ".copy";
@@ -177,6 +205,88 @@ namespace CookieBox_pkg
 	//	Lets use the sparsity rather than fill the entire ND array	//
 	//	std::map gives a key::value pair	//
 
+	bool Acqiris::fancyfill(Event& evt, Env& env, a5d_ll_2dview_t & slice, a4d_ll_1dview_t & shotslice)
+	{
+		// use this method to fill a slice of the multi_array, but incorporating the Y conv ddY filter, where we want the histogram.
+		m_srcPtr = evt.get(m_srcStr);
+		if (!m_srcPtr.get()){return false;}
+		//std::cerr << "m_nchannels in Acqiris::fill() = " << m_nchannels << std::endl;
+		if (m_getConfig){std::cout << getConfig(env);}
+		//std::cerr << "m_nchannels in Acqiris::fill() after m_getConfig test = " << m_nchannels << std::endl;
+
+		if (m_data.size() != m_nchannels)
+			m_data.resize(m_nchannels);
+		if (m_data.back().size() != m_lims.at(bins)){
+			for (unsigned c=0;c<m_data.size();++c)
+				m_data[c].resize(m_lims.at(bins),0);
+		}
+
+		for (unsigned chan=0;chan<m_nchannels;++chan){
+			wf_t wf = m_srcPtr->data(chan).waveforms(); // the 2D'ness of this is for the unused segments, not the channels.
+			
+
+			const int segment = 0; // [chris ogrady] always 0 for LCLS data taken so far (a feature of the acqiris we don't use)
+			long long basesum;
+			basesum = 0;
+			for (unsigned s = m_baselims.at(start); s < m_baselims.at(stop);++s){
+				// fill baseline //
+				basesum += wf[segment][s];
+			}
+
+			HERE HERE HERE HERE working on the fftw for sake of Y conv ddY filtering
+
+
+			size_t sz = m_lims.at(bins);
+			for (unsigned s = 0; s < sz; ++s) {
+				long int val = (wf[segment][m_lims.at(start) + s] - basesum/m_baselims.at(bins));
+				if (m_invert)
+					val *= -1;
+				wf_y[s] = double(val);
+				m_data.at(chan).at(s) = val;
+			}
+			fftw_execute_r2r(plan_r2hc,
+					wf_y,
+					wf_Y
+					);
+			unsigned bwd = sz/3;
+			wf_DDY[0] = 0.;
+			for( unsigned s=1;s<bwd;++s){
+				double lpf = (std::cos(double(s)/(double)bwd),int(2));
+				wf_Y[s] *= lpf;
+				wf_Y[sz-s] *= lpf;
+				wf_DDY[s] = -std::pow(double(s),int(2)) * wf_Y[s];
+				wf_DDY[sz-s] = -std::pow(double(s),int(2)) * wf_Y[sz-s];
+			}	
+			for( unsigned s=bwd;s<sz/2;++s){
+				wf_Y[s] = wf_Y[sz-s] = wf_DDY[s] = wf_DDY[sz-s] = 0.;
+			}
+
+			fftw_execute_r2r(plan_hc2r,
+					wf_Y,
+					wf_y
+					);
+			fftw_execute_r2r(plan_hc2r,
+					wf_DDY,
+					wf_ddy
+					);
+
+
+			double thresh = 5.e-5;
+			for ( unsigned s=0; s<sz; ++s){
+				double res = 0.;
+				if ( (wf_y[s] > 0.) && (wf_ddy[s] < 0.)){
+					res = wf_y[s] * -1. * wf_ddy[s] / thresh;	
+					if (res > 1){					
+						slice[chan][s] += std::log(res);
+					}
+				}
+			}
+			++shotslice[chan]; 
+			HERE HERE HERE -- breaking code to know where to begin again.  Seems to be getting there
+		}
+		return true;
+	}
+
 	bool Acqiris::fill(Event& evt, Env& env, a5d_ll_2dview_t & slice, a4d_ll_1dview_t & shotslice)
 	{
 		// use this method to fill a slice of the multi_array where we want the histogram.
@@ -261,10 +371,6 @@ namespace CookieBox_pkg
 		return true;
 	}
 
-	bool Acqiris::fancyfilter(void)
-	{
-		return true;
-	}
 	bool Acqiris::fill(Event& evt, Env& env)
 	{
 		// HERE HERE HERE //
