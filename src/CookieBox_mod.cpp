@@ -1637,6 +1637,10 @@ namespace CookieBox_pkg {
 					e2t_setlims(k,c,slims,weights);
 					if (slims.front() == slims.back()){
 						y[c] = (1.-weights.back() + weights.front())*(double)m_data_5d[t][e][g][c][slims.front()];
+						/* I think here is my Jacobian?
+						 * JACOBIAN JACOBIAN
+						 * It is put into weights()
+						 */
 					} else {
 						y[c] = weights.front()*(double)m_data_5d[t][e][g][c][slims.front()];
 						for (unsigned s=slims.front()+1;s<slims.back();++s){
