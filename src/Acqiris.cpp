@@ -30,6 +30,12 @@ namespace CookieBox_pkg
 	, m_use(false)
 	, m_print(false)
 	, m_nchannels(1)
+	, wf_y(NULL)
+	, wf_ddy(NULL)
+	, wf_Y_hc(NULL)
+	, wf_DDY_hc(NULL)
+	, plan_r2hc(NULL)
+	, plan_hc2r(NULL)
 	{
 	}
 
@@ -37,15 +43,17 @@ namespace CookieBox_pkg
 	{
 		if (m_outfile.is_open())
 			m_outfile.close();
-		fftw_free(wf_y);
-		fftw_free(wf_ddy);
-		fftw_free(wf_Y_hc);
-		fftw_free(wf_DDY_hc);
+		//std::cerr << "Now killing off fftw vectors" << std::endl;
+		if (wf_y != NULL){ fftw_free(wf_y); }
+		if (wf_ddy != NULL) { fftw_free(wf_ddy); }
+		if (wf_Y_hc != NULL) { fftw_free(wf_Y_hc); }
+		if (wf_DDY_hc != NULL) { fftw_free(wf_DDY_hc); }
+		if (plan_r2hc != NULL){ fftw_destroy_plan(plan_r2hc); }
+		if (plan_hc2r != NULL){ fftw_destroy_plan(plan_hc2r); }
 	}
 	Acqiris & Acqiris::operator=( Acqiris rhs ){ // the compiler is making a pass by copy here //
 		swap(*this,rhs); // using the swap makes this exception safe... 
 		return *this;
-		size_t sz = m_lims.at(bins);
 	}
 
 	Acqiris::Acqiris(const Acqiris & b)
@@ -69,6 +77,12 @@ namespace CookieBox_pkg
 		this->m_data = b.m_data; 
 
 		size_t sz = m_lims.at(bins);
+		if (wf_y != NULL){ fftw_free(wf_y); }
+		if (wf_ddy != NULL) { fftw_free(wf_ddy); }
+		if (wf_Y_hc != NULL) { fftw_free(wf_Y_hc); }
+		if (wf_DDY_hc != NULL) { fftw_free(wf_DDY_hc); }
+		if (plan_r2hc != NULL){ fftw_destroy_plan(plan_r2hc); }
+		if (plan_hc2r != NULL){ fftw_destroy_plan(plan_hc2r); }
 		wf_y = (double *) fftw_malloc(sizeof(double) * sz);
 		wf_ddy = (double *) fftw_malloc(sizeof(double) * sz);
 		wf_Y_hc = (double *) fftw_malloc(sizeof(double) * sz);

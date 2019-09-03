@@ -10,6 +10,8 @@
 #include "ImgAlgos/GlobalMethods.h"
 #include "MsgLogger/MsgLogger.h"
 
+#include <fftw/fftw3.h>
+
 #include <vector>
 #include <algorithm>
 //#include <map> // map didn't help my badd pass of srcPtr
@@ -85,10 +87,12 @@ class Acqiris
 	protected:
 
 	private:
-		double * wf_y = (double *) fftw_malloc(sizeof(double) * sz);
-		double * wf_ddy = (double *) fftw_malloc(sizeof(double) * sz);
-		double * wf_Y_hc = (double *) fftw_malloc(sizeof(double) * sz);
-		double * wf_DDY_hc = (double *) fftw_malloc(sizeof(double) * sz);
+		double * wf_y; // = (double *) fftw_malloc(sizeof(double) * sz);
+		double * wf_ddy; // = (double *) fftw_malloc(sizeof(double) * sz);
+		double * wf_Y_hc; // = (double *) fftw_malloc(sizeof(double) * sz);
+		double * wf_DDY_hc; // = (double *) fftw_malloc(sizeof(double) * sz);
+		fftw_plan plan_r2hc;
+		fftw_plan plan_hc2r;
 
 		bool m_use,m_print,m_invert;
 		std::ofstream m_outfile;
