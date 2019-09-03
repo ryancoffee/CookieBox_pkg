@@ -260,6 +260,11 @@ namespace CookieBox_pkg
 		}
 		return true;
 	}
+
+	bool Acqiris::fancyfilter(void)
+	{
+		return true;
+	}
 	bool Acqiris::fill(Event& evt, Env& env)
 	{
 		// HERE HERE HERE //

@@ -40,6 +40,8 @@ class Acqiris
 		void swap(Acqiris & a, Acqiris & b);
 		void deepcopy_data(const Acqiris & b);
 
+		bool fancyfilter(void);
+
 
 	public:
 		bool init( std::vector<unsigned>& lims_in, std::vector<unsigned>& baselims_in);

@@ -7,6 +7,7 @@
 #include <exception>
 #include <functional> 
 
+
 //#include <initializer_list>
 // This declares this class as psana module
 using namespace CookieBox_pkg;
@@ -344,7 +345,6 @@ namespace CookieBox_pkg{
 		m_outfile << "#eventnum\tindex(pos)\tindex(delay)\tpos\tamp\twidth\tdelay";
 		m_outfile << "\n";
 	}
-	/*
 	bool TimeTool::isref(Event& evt,Env& env)
 	{
 		//shared_ptr<auto> srcPtr = evt.get(m_evr_src);
@@ -369,6 +369,5 @@ namespace CookieBox_pkg{
 		}
 		return true;
 	}
-	*/
 }
 
