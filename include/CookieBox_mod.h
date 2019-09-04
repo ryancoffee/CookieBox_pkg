@@ -14,6 +14,7 @@
 // C/C++ Headers --
 //-----------------
 #include <algorithm>
+#include <memory>
 #include <map>
 #include <fftw/fftw3.h>
 #include <time.h>
@@ -53,6 +54,8 @@
 //#include "CookieBox_pkg/TransAbs.h"
 #include "CookieBox_pkg/Learning.h"
 #include "CookieBox_pkg/dataops.h"
+
+#include <fftw/fftw3.h>
 
 
 //------------------------------------
@@ -149,7 +152,7 @@ class CookieBox_mod
 	CookieBox_mod (const std::string& name) ;
 
 	// Destructor
-			virtual ~CookieBox_mod () ;
+	virtual ~CookieBox_mod () ;
 
 			/// Method which is called once at the beginning of the job
 			virtual void beginJob(Event& evt, Env& env);
@@ -181,6 +184,9 @@ class CookieBox_mod
 			CF_MemFuncPtr corr_factor;
 			READ_CorrFactorsMemFuncPtr read_corr_factors;
 			READ_E2T_ConversionMemFuncPtr read_e2t_conversion;
+
+	fftw_plan plan_r2hc;
+	fftw_plan plan_hc2r;
 
 			// member objects //
 			Ebeam m_eb;

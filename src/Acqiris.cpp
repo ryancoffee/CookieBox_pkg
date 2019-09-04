@@ -18,11 +18,6 @@ namespace CookieBox_pkg
 	, m_nchannels(1)
 	{
 		init(lims_in,baselims_in);
-		size_t sz = m_lims.at(bins);
-		wf_y = (double *) fftw_malloc(sizeof(double) * sz);
-		wf_ddy = (double *) fftw_malloc(sizeof(double) * sz);
-		wf_Y_hc = (double *) fftw_malloc(sizeof(double) * sz);
-		wf_DDY_hc = (double *) fftw_malloc(sizeof(double) * sz);
 	}
 
 	Acqiris::Acqiris(void)
@@ -34,8 +29,8 @@ namespace CookieBox_pkg
 	, wf_ddy(NULL)
 	, wf_Y_hc(NULL)
 	, wf_DDY_hc(NULL)
-	, plan_r2hc(NULL)
-	, plan_hc2r(NULL)
+	, plan_r2hc_Ptr(NULL)
+	, plan_hc2r_Ptr(NULL)
 	{
 	}
 
@@ -48,63 +43,46 @@ namespace CookieBox_pkg
 		if (wf_ddy != NULL) { fftw_free(wf_ddy); }
 		if (wf_Y_hc != NULL) { fftw_free(wf_Y_hc); }
 		if (wf_DDY_hc != NULL) { fftw_free(wf_DDY_hc); }
-		if (plan_r2hc != NULL){ fftw_destroy_plan(plan_r2hc); }
-		if (plan_hc2r != NULL){ fftw_destroy_plan(plan_hc2r); }
 	}
-	Acqiris & Acqiris::operator=( Acqiris rhs ){ // the compiler is making a pass by copy here //
-		swap(*this,rhs); // using the swap makes this exception safe... 
+	Acqiris & Acqiris::operator= ( const Acqiris & rhs )
+	{
+		m_srcPtr = rhs.m_srcPtr;
+		m_getConfig=rhs.m_getConfig;
+		m_use=rhs.m_use;
+		m_srcStr=rhs.m_srcStr;
+		m_ConfigPtr=rhs.m_ConfigPtr;
+		m_print=rhs.m_print;
+		m_filename=rhs.m_filename;
+		m_nchannels=rhs.m_nchannels;
+		m_max_samples=rhs.m_max_samples;
+
+		m_lims.resize(rhs.m_lims.size());
+		m_baselims.resize(rhs.m_baselims.size());
+		std::copy(rhs.m_lims.begin(),rhs.m_lims.end(),m_lims.begin());
+		std::copy(rhs.m_baselims.begin(),rhs.m_baselims.end(),m_baselims.begin());
+		init();
+		deepcopy_data(rhs);
 		return *this;
 	}
 
-	Acqiris::Acqiris(const Acqiris & b)
-	: m_srcPtr(b.m_srcPtr)
-	, m_getConfig(b.m_getConfig)
-	, m_use(b.m_use)
-	, m_srcStr(b.m_srcStr)
-	, m_ConfigPtr(b.m_ConfigPtr)
-	, m_print(b.m_print)
-	, m_filename(b.m_filename)
-	, m_nchannels(b.m_nchannels)
-	, m_max_samples(b.m_max_samples)
-	{ // not so sure this is exception safe
-		m_lims.resize(b.m_lims.size());
-		m_baselims.resize(b.m_baselims.size());
-		for (unsigned i=0;i<b.m_lims.size();++i)
-			m_lims[i] = b.m_lims[i];
-		for (unsigned i=0;i<b.m_baselims.size();++i)
-			m_baselims[i] = b.m_baselims[i];
+	Acqiris::Acqiris(const Acqiris & rhs)
+	: m_srcPtr(rhs.m_srcPtr)
+	, m_getConfig(rhs.m_getConfig)
+	, m_use(rhs.m_use)
+	, m_srcStr(rhs.m_srcStr)
+	, m_ConfigPtr(rhs.m_ConfigPtr)
+	, m_print(rhs.m_print)
+	, m_filename(rhs.m_filename)
+	, m_nchannels(rhs.m_nchannels)
+	, m_max_samples(rhs.m_max_samples)
+	{ 
+		m_lims.resize(rhs.m_lims.size());
+		m_baselims.resize(rhs.m_baselims.size());
+		std::copy(rhs.m_lims.begin(),rhs.m_lims.end(),m_lims.begin());
+		std::copy(rhs.m_baselims.begin(),rhs.m_baselims.end(),m_baselims.begin());
+		init();
+		deepcopy_data(rhs);
 
-		this->m_data = b.m_data; 
-
-		size_t sz = m_lims.at(bins);
-		if (wf_y != NULL){ fftw_free(wf_y); }
-		if (wf_ddy != NULL) { fftw_free(wf_ddy); }
-		if (wf_Y_hc != NULL) { fftw_free(wf_Y_hc); }
-		if (wf_DDY_hc != NULL) { fftw_free(wf_DDY_hc); }
-		if (plan_r2hc != NULL){ fftw_destroy_plan(plan_r2hc); }
-		if (plan_hc2r != NULL){ fftw_destroy_plan(plan_hc2r); }
-		wf_y = (double *) fftw_malloc(sizeof(double) * sz);
-		wf_ddy = (double *) fftw_malloc(sizeof(double) * sz);
-		wf_Y_hc = (double *) fftw_malloc(sizeof(double) * sz);
-		wf_DDY_hc = (double *) fftw_malloc(sizeof(double) * sz);
-		fftw_plan plan_r2hc = fftw_plan_r2r_1d(sz,
-				wf_y,
-				wf_Y,
-				FFTW_R2HC,
-				FFTW_MEASURE
-				);
-		fftw_plan plan_hc2r = fftw_plan_r2r_1d(sz,
-				wf_Y_hc,
-				wf_y,
-				FFTW_HC2R,
-				FFTW_MEASURE
-				);
-
-		if (m_print){
-			m_filename += ".copy";
-			if (b.m_outfile.is_open())
-				m_outfile.open(m_filename.c_str(),std::ios::out);
-		}
 	}
 	void Acqiris::deepcopy_data(const Acqiris & b)
 	{
@@ -115,42 +93,6 @@ namespace CookieBox_pkg
 				m_data[i][j] = b.m_data[i][j];
 		}
 	}
-	void Acqiris::swap(Acqiris& a, Acqiris& b){
-		std::swap(a.m_getConfig,b.m_getConfig);
-		std::swap(a.m_use,b.m_use);
-		std::swap(a.m_srcStr,b.m_srcStr);
-		std::swap(a.m_ConfigPtr,b.m_ConfigPtr);
-		std::swap(a.m_nchannels , b.m_nchannels);
-		std::swap(a.m_max_samples , b.m_max_samples);
-		std::swap(a.m_rank,b.m_rank);
-		std::swap(a.m_mpi_size,b.m_mpi_size);
-
-		m_data.swap(b.m_data);
-		m_lims.swap(b.m_lims);
-		m_baselims.swap(b.m_baselims);
-
-		std::swap(a.m_print,b.m_print);
-		std::swap(a.m_filename,b.m_filename);
-		if (a.m_outfile.is_open() && b.m_outfile.is_open()){
-			a.m_outfile.close();
-			b.m_outfile.close();
-			a.m_outfile.open(a.m_filename.c_str(),std::ios::app);
-			b.m_outfile.open(b.m_filename.c_str(),std::ios::app);
-			return;
-		}
-		if (a.m_outfile.is_open() && !b.m_outfile.is_open()){
-			a.m_outfile.close();
-			b.m_outfile.open(b.m_filename.c_str(),std::ios::app);
-			return;
-		}
-		if (!a.m_outfile.is_open() && b.m_outfile.is_open()){
-			b.m_outfile.close();
-			a.m_outfile.open(a.m_filename.c_str(),std::ios::app);
-			return;
-		}
-
-	}
-
 
 	bool Acqiris::init( std::vector<unsigned>& lims_in
 			, std::vector<unsigned>& baselims_in)
@@ -160,11 +102,8 @@ namespace CookieBox_pkg
 			std::cerr << "Failed sizes in Acqiris::init() method " << std::endl;
 			return false;
 		}
-		//std::vector<unsigned>::iterator itr = lims_in.begin();
-		//std::vector<unsigned>::iterator itr_base = baselims_in.begin();
 		m_lims = lims_in;
 		m_baselims = baselims_in;
-
 		m_lims.push_back(lims_in.back() - lims_in.front());
 		m_baselims.push_back(baselims_in.back() - baselims_in.front());
 		std::cerr << "m_lims =\t";  
@@ -175,7 +114,48 @@ namespace CookieBox_pkg
 			std::cerr << m_baselims.at(i) << "\t";
 		std::cerr << "\n" << std::flush;
 		std::cerr << "m_nchannels (in Acqiris::init() ) = " << m_nchannels << std::endl;
+
+		return init();
+	}
+	bool Acqiris::init()
+	{
+
+		std::cerr << "Now setting up the fftw vectors and... \n" << std::flush;
+
+		size_t sz = m_lims.at(bins);
+		wf_y = (double *) fftw_malloc(sizeof(double) * sz);
+		wf_ddy = (double *) fftw_malloc(sizeof(double) * sz);
+		wf_Y_hc = (double *) fftw_malloc(sizeof(double) * sz);
+		wf_DDY_hc = (double *) fftw_malloc(sizeof(double) * sz);
+
+		std::cerr << "... plans \n" << std::flush;
+
+		setplans(rhs);
+
+		std::cerr << "OK, fftw for Acqiris is initialized \n" << std::flush;
 		return true;
+	}
+	void Acqiris::setplans(const Acqiris & rhs)
+	{
+		plan_r2hc_Ptr = rhs.plan_r2hc_Ptr;
+		plan_hc2r_Ptr = rhs.plan_hc2r_dPtr;
+	}
+
+	void Acqiris::setmasterplans(fftw_plan * const forward,fftw_plan * const backward)
+	{
+		assert(plan_r2hc_Ptr.use_count()==0 && plan_hc2r_Ptr.use_count()==0);
+		size_t sz = m_lims.at(bins);
+		*forward = fftw_plan_r2hc(sz,
+				wf_y,
+				wf_Y,	
+				FFTW_ESTIMATE);
+		*backward = fftw_plan_hc2r(sz,
+				wf_Y_hc,
+				wf_y,
+				FFTW_ESTIMATE);
+		plan_r2hc_Ptr = std::make_shared<fftw_plan> (*forward);
+		plan_hc2r_Ptr = std::make_shared<fftw_plan> (*backward);
+
 	}
 
 	void Acqiris::srcStr(Source srcStr_in){
@@ -247,7 +227,7 @@ namespace CookieBox_pkg
 				basesum += wf[segment][s];
 			}
 
-			HERE HERE HERE HERE working on the fftw for sake of Y conv ddY filtering
+			//HERE HERE HERE HERE working on the fftw for sake of Y conv ddY filtering
 
 
 			size_t sz = m_lims.at(bins);
@@ -258,32 +238,24 @@ namespace CookieBox_pkg
 				wf_y[s] = double(val);
 				m_data.at(chan).at(s) = val;
 			}
-			fftw_execute_r2r(plan_r2hc,
-					wf_y,
-					wf_Y
-					);
+
+			fftw_execute_r2r(*plan_r2hc_Ptr.get(), wf_y, wf_Y_hc );
+
 			unsigned bwd = sz/3;
-			wf_DDY[0] = 0.;
+			wf_DDY_hc[0] = 0.;
 			for( unsigned s=1;s<bwd;++s){
 				double lpf = (std::cos(double(s)/(double)bwd),int(2));
-				wf_Y[s] *= lpf;
-				wf_Y[sz-s] *= lpf;
-				wf_DDY[s] = -std::pow(double(s),int(2)) * wf_Y[s];
-				wf_DDY[sz-s] = -std::pow(double(s),int(2)) * wf_Y[sz-s];
+				wf_Y_hc[s] *= lpf;
+				wf_Y_hc[sz-s] *= lpf;
+				wf_DDY_hc[s] = -std::pow(double(s),int(2)) * wf_Y_hc[s];
+				wf_DDY_hc[sz-s] = -std::pow(double(s),int(2)) * wf_Y_hc[sz-s];
 			}	
 			for( unsigned s=bwd;s<sz/2;++s){
-				wf_Y[s] = wf_Y[sz-s] = wf_DDY[s] = wf_DDY[sz-s] = 0.;
+				wf_Y_hc[s] = wf_Y_hc[sz-s] = wf_DDY_hc[s] = wf_DDY_hc[sz-s] = 0.;
 			}
 
-			fftw_execute_r2r(plan_hc2r,
-					wf_Y,
-					wf_y
-					);
-			fftw_execute_r2r(plan_hc2r,
-					wf_DDY,
-					wf_ddy
-					);
-
+			fftw_execute_r2r(*plan_hc2r_Ptr.get(), wf_Y_hc, wf_y );
+			fftw_execute_r2r(*plan_hc2r_Ptr.get(), wf_DDY_hc, wf_ddy );
 
 			double thresh = 5.e-5;
 			for ( unsigned s=0; s<sz; ++s){
@@ -296,7 +268,6 @@ namespace CookieBox_pkg
 				}
 			}
 			++shotslice[chan]; 
-			HERE HERE HERE -- breaking code to know where to begin again.  Seems to be getting there
 		}
 		return true;
 	}

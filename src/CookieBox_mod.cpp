@@ -55,6 +55,7 @@ namespace CookieBox_pkg {
 	//----------------
 	// Constructors --
 	//----------------
+
 	CookieBox_mod::CookieBox_mod(const std::string& name)
 		: Module(name)
 		  , m_skip_events()
@@ -194,17 +195,22 @@ namespace CookieBox_pkg {
 			std::vector<std::string> aq_source_list = (configList("aq_source_list"));
 			std::vector<unsigned> aq_baseline_lims = (configList("aq_baseline_lims"));
 			std::vector<unsigned> aq_lims = (configList("aq_lims"));
+			std::cerr << "I bet it fails HERE ... \n... before ...\n" << std::flush;
 			m_aq.clear();
+			Acqiris master(aq_lims,aq_baseline_lims);
+			master.setmasterplans(&plan_r2hc,&plan_hc2r);
+			master.use(*logic_itr);
+			master.print(*print_itr);
+			master.invert(config("aq_invert",false));
 			m_aq.resize(aq_source_list.size());
+			std::cerr << "HERE\n" << std::flush;
 			for (std::vector<std::string>::iterator srcItr = aq_source_list.begin(); 
 				srcItr != aq_source_list.end(); 
 				++srcItr){
 				unsigned i = std::distance(aq_source_list.begin(), srcItr);
-				m_aq.at(i).init(aq_lims,aq_baseline_lims);
-				m_aq.at(i).use(*logic_itr);
+				m_aq.at(i) = master;
+				std::cerr << "what about HERE\n" << std::flush;
 				m_aq.at(i).srcStr((Source)*srcItr);
-				m_aq.at(i).print(*print_itr);
-				m_aq.at(i).invert(config("aq_invert",false));
 				totalchannels += m_aq.at(i).nchannels();
 				unsigned s = m_aq.at(i).nsamples();
 				if ( samples < s)
@@ -250,7 +256,8 @@ namespace CookieBox_pkg {
 	//--------------
 	CookieBox_mod::~CookieBox_mod ()
 	{
-
+		if (plan_r2hc != NULL){ fftw_destroy_plan(plan_r2hc); }
+		if (plan_hc2r != NULL){ fftw_destroy_plan(plan_hc2r); }
 	}
 
 	bool CookieBox_mod::isApprovedByCounters()

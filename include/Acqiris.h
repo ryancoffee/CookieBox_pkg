@@ -10,6 +10,7 @@
 #include "ImgAlgos/GlobalMethods.h"
 #include "MsgLogger/MsgLogger.h"
 
+#include <memory>
 #include <fftw/fftw3.h>
 
 #include <vector>
@@ -36,17 +37,17 @@ class Acqiris
 		Acqiris (std::vector<unsigned>& lims_in , std::vector<unsigned>& baselims_in);
 		~Acqiris(void);
 		Acqiris( const Acqiris & rhs);
-		Acqiris & operator=( Acqiris rhs );
+		Acqiris & operator=( const Acqiris & rhs );
 	
 	private:	
-		void swap(Acqiris & a, Acqiris & b);
 		void deepcopy_data(const Acqiris & b);
 
-		bool fancyfill(Event& evt, Env& env, a5d_ll_2dview_t & slice, a4d_ll_1dview_t & shotslice)
-
+	void setplans(const Acqiris & rhs);
 
 	public:
 		bool init( std::vector<unsigned>& lims_in, std::vector<unsigned>& baselims_in);
+		bool init( void);
+		void setmasterplans(fftw_plan * const forward,fftw_plan * const backward);
 
 		inline bool use(bool in){m_use = in;return m_use;}
 		inline bool use(void){return m_use;}
@@ -73,6 +74,7 @@ class Acqiris
 		void evtput(Event& evt, Env& env);
 		void evtput(Event& evt, Env& env, const unsigned chan);
 
+		bool fancyfill(Event& evt, Env& env, a5d_ll_2dview_t & slice, a4d_ll_1dview_t & shotslice);
 		bool fill(Event& evt, Env& env, a5d_ll_2dview_t & slice, a4d_ll_1dview_t & shotslice);
 		bool fill(Event& evt, Env& env, a4d_ll_2dview_t & slice);
 		bool fill(Event& evt, Env& env);
@@ -91,8 +93,8 @@ class Acqiris
 		double * wf_ddy; // = (double *) fftw_malloc(sizeof(double) * sz);
 		double * wf_Y_hc; // = (double *) fftw_malloc(sizeof(double) * sz);
 		double * wf_DDY_hc; // = (double *) fftw_malloc(sizeof(double) * sz);
-		fftw_plan plan_r2hc;
-		fftw_plan plan_hc2r;
+		std::shared_ptr<fftw_plan> plan_r2hc_Ptr;
+		std::shared_ptr<fftw_plan> plan_hc2r_Ptr;
 
 		bool m_use,m_print,m_invert;
 		std::ofstream m_outfile;
