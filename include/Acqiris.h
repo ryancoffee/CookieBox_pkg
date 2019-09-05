@@ -42,12 +42,12 @@ class Acqiris
 	private:	
 		void deepcopy_data(const Acqiris & b);
 
-	void setplans(const Acqiris & rhs);
 
 	public:
 		bool init( std::vector<unsigned>& lims_in, std::vector<unsigned>& baselims_in);
 		bool init( void);
 		void setmasterplans(fftw_plan * const forward,fftw_plan * const backward);
+		void pointplans(const Acqiris & rhs);
 
 		inline bool use(bool in){m_use = in;return m_use;}
 		inline bool use(void){return m_use;}
@@ -93,8 +93,8 @@ class Acqiris
 		double * wf_ddy; // = (double *) fftw_malloc(sizeof(double) * sz);
 		double * wf_Y_hc; // = (double *) fftw_malloc(sizeof(double) * sz);
 		double * wf_DDY_hc; // = (double *) fftw_malloc(sizeof(double) * sz);
-		std::shared_ptr<fftw_plan> plan_r2hc_Ptr;
-		std::shared_ptr<fftw_plan> plan_hc2r_Ptr;
+		fftw_plan* plan_r2hc_Ptr;
+		fftw_plan* plan_hc2r_Ptr;
 
 		bool m_use,m_print,m_invert;
 		std::ofstream m_outfile;
@@ -108,6 +108,7 @@ class Acqiris
 		Pds::Src m_src;
 
 		std::vector< std::vector<long int> > m_data;
+		std::vector< std::vector<double> > m_data_dbl;
 
 		unsigned m_nchannels;
 		unsigned m_max_samples;

@@ -67,6 +67,8 @@ namespace CookieBox_pkg {
 		  , m_endruntime(0)
 		  , m_makeRotorProjections(false)
 		  , m_nrolls(1)
+		  , plan_r2hc(NULL)
+		  , plan_hc2r(NULL)
 	{
 		// get the values from configuration or use defaults
 		m_printMarkusLegendresCompare = config("printMarkusLegendresCompare",false);
@@ -195,26 +197,24 @@ namespace CookieBox_pkg {
 			std::vector<std::string> aq_source_list = (configList("aq_source_list"));
 			std::vector<unsigned> aq_baseline_lims = (configList("aq_baseline_lims"));
 			std::vector<unsigned> aq_lims = (configList("aq_lims"));
-			std::cerr << "I bet it fails HERE ... \n... before ...\n" << std::flush;
 			m_aq.clear();
-			Acqiris master(aq_lims,aq_baseline_lims);
-			master.setmasterplans(&plan_r2hc,&plan_hc2r);
-			master.use(*logic_itr);
-			master.print(*print_itr);
-			master.invert(config("aq_invert",false));
-			m_aq.resize(aq_source_list.size());
-			std::cerr << "HERE\n" << std::flush;
+			//Acqiris master(aq_lims,aq_baseline_lims);
+			//m_aq.resize(aq_source_list.size());
 			for (std::vector<std::string>::iterator srcItr = aq_source_list.begin(); 
 				srcItr != aq_source_list.end(); 
 				++srcItr){
-				unsigned i = std::distance(aq_source_list.begin(), srcItr);
-				m_aq.at(i) = master;
-				std::cerr << "what about HERE\n" << std::flush;
-				m_aq.at(i).srcStr((Source)*srcItr);
-				totalchannels += m_aq.at(i).nchannels();
-				unsigned s = m_aq.at(i).nsamples();
+				//unsigned i = std::distance(aq_source_list.begin(), srcItr);
+				//m_aq.at(i) = master;
+				m_aq.push_back(Acqiris(aq_lims,aq_baseline_lims));
+				m_aq.back().srcStr((Source)*srcItr);
+				m_aq.back().use(*logic_itr);
+				m_aq.back().print(*print_itr);
+				m_aq.back().invert(config("aq_invert",false));
+				totalchannels += m_aq.back().nchannels();
+				unsigned s = m_aq.back().nsamples();
 				if ( samples < s)
 					samples = s;
+				std::cerr << "at creation m_aq.back().nsamples() = " << m_aq.back().nsamples() << "\n" << std::flush;
 			}
 
 			std::cerr << "Exiting the locic_itr for initializing vector<m_aq>" << std::endl;
@@ -354,14 +354,17 @@ namespace CookieBox_pkg {
 		}
 
 		//std::cerr << "Entering the m_aq.size() loop for initializing file" << std::endl;
+		unsigned totalchannels = 0;
 		for (unsigned i=0;i<m_aq.size();++i){
+			unsigned samples = 0;
 			if (m_aq[i].use()){
 				m_aq[i].getConfig(env);
-				unsigned totalchannels = 0;
-				unsigned samples = 0;
 				totalchannels += m_aq.at(i).nchannels();
 				if (samples < m_aq[i].nsamples())
 					samples = m_aq[i].nsamples();
+
+				std::cerr << "m_aq[ " << i << " ].nsamples() = " << samples << "\n" << std::flush;
+				m_aq[i].setmasterplans(&plan_r2hc,&plan_hc2r);
 
 				if ( m_eb.use() && m_gd.use() && m_tt.use() ) {
 					if (m_shots_4d.shape()[0] < m_tt.bins(TimeTool::delay)//delay) //pos)
@@ -479,11 +482,11 @@ namespace CookieBox_pkg {
 			return; // if out of skip and limit bounds, return from event
 
 		if (!processEvent(evt,env)) {
-			//std::cout << "processing event failed" << std::endl;
+			std::cout << "processing event failed" << std::endl;
 			++ m_failed_event.at(m_rank);
 			return; // if processing fails, return from event
 		}
-		//std::cout << " finished event " << m_count_event.at(m_rank) << " for rank " << m_rank << std::endl;
+		std::cout << " finished event " << m_count_event.at(m_rank) << " for rank " << m_rank << std::endl;
 
 		return;
 	}
@@ -493,6 +496,8 @@ namespace CookieBox_pkg {
 	bool CookieBox_mod::sampleevery(unsigned in = 1)
 	{
 		if (in < 1){in = 1;}
+		std::cerr << "in sampleevery() method with m_count_event.at(m_rank) = " << std::flush;
+		std::cerr << m_count_event.at(m_rank) << "\n" << std::flush;
 		return (m_count_event.at(m_rank)%in < 2);
 	}
 
@@ -595,7 +600,7 @@ namespace CookieBox_pkg {
 						];
 
 				// Ideally, make a class of accumulators (or signal accumulators) to pass all these slices and things //
-				if ( m_aq[i].fill(evt,env,slice,shotslice)) { 
+				if ( m_aq[i].fancyfill(evt,env,slice,shotslice)) { 
 					startchanind += m_aq[i].nchannels();
 				} else {
 					std::cerr << "Failed the Acqiris, skipping the print and rest of event " 
@@ -615,6 +620,7 @@ namespace CookieBox_pkg {
 		}
 
 		if ( sampleevery(m_print_every)  ){
+
 			/*
 			if (m_ta.use() && m_ta.print() ){
 				if ( !( m_ta.print_out(m_count_event.at(m_rank)))){
@@ -640,12 +646,10 @@ namespace CookieBox_pkg {
 			if (m_tt.use() && m_tt.print() && !m_tt.print_out(m_count_event.at(m_rank)))
 				std::cerr << "Failed to print TimeTool for shot " << m_count_event.at(m_rank) << std::endl;
 			for (unsigned i=0;i< m_aq.size();++i){
-				/*
-				std::cout << "in sampleevery(m_print_every) at event " << m_count_event.at(m_rank) 
-					<< " and rank " << m_rank << "\n\t... trying to print m_aq.vectors" << std::endl;
-				*/
-				if (m_aq[i].use() && m_aq[i].print() && !m_aq[i].print_out( m_count_event.at(m_rank) ))
-					std::cerr << "Failed to print Acqiris for shot " << m_count_event.at(m_rank) << std::endl;
+				if (m_aq[i].use() && m_aq[i].print()){
+					if (!m_aq[i].print_out( m_count_event.at(m_rank) ))
+						std::cerr << "Failed to print Acqiris for shot " << m_count_event.at(m_rank) << std::endl;
+				}
 			}
 
 		}
@@ -739,13 +743,9 @@ namespace CookieBox_pkg {
 
 		} // endif m_learn.use()
 
-		/*
+		
 		std::cout << "\n\t\t --- finished event " << m_count_event.at(m_rank) 
 			<< " --- \n \t\t --- at rank " << m_rank << "---" << std::endl;
-		*/
-
-
-
 		return true;
 	}
 
@@ -859,6 +859,9 @@ namespace CookieBox_pkg {
 		time(&m_endruntime);
 		double dtime = difftime(m_endruntime,m_beginruntime);
 		std::cout << "processing events took " << dtime << " seconds" << std::endl;
+		std::cerr << "destroying the fftwplans\n" << std::flush;
+		fftw_destroy_plan(plan_r2hc);
+		fftw_destroy_plan(plan_hc2r);
 		/*
 		if ( m_ta.use() && m_ta.print_avg() ){
 			std::cerr << "Failed to print TransAbs average" << std::endl;
@@ -1115,13 +1118,13 @@ namespace CookieBox_pkg {
 		double * rollslice_r = (double *) fftw_malloc(sizeof(double) * sz);
 		double * rollslice_hc = (double *) fftw_malloc(sizeof(double) * sz);
 
-		fftw_plan plan_r2hc = fftw_plan_r2r_1d(sz,
+		fftw_plan plan_timeslice_r2hc = fftw_plan_r2r_1d(sz,
 				timeslice_r,
 				timeslice_hc,
 				FFTW_R2HC,
 				FFTW_MEASURE
 				);
-		fftw_plan plan_hc2r = fftw_plan_r2r_1d(sz,
+		fftw_plan plan_timeslice_hc2r = fftw_plan_r2r_1d(sz,
 				timeslice_hc,
 				timeslice_r,
 				FFTW_HC2R,
@@ -1214,7 +1217,7 @@ namespace CookieBox_pkg {
 						double sig = m_totsignal_4d[t][e][g][k];
 						//sig /= m_shots_4d[t][e][g][0];
 						//outfile << m_totsignal_4d[t][e][g][k] << "\t";
-						outfile << sig < "\t";
+						outfile << sig << "\t";
 					}
 					if (m_markusfileLegs.is_open()) { 
 						m_markusfileLegs.close(); 
@@ -1350,7 +1353,7 @@ namespace CookieBox_pkg {
 									sin2mask(rollslice_r,timeslice_r,sz,center,width);
 
 
-									fftw_execute_r2r(plan_r2hc,
+									fftw_execute_r2r(plan_timeslice_r2hc,
 											rollslice_r,
 											rollslice_hc
 											);
@@ -1365,7 +1368,7 @@ namespace CookieBox_pkg {
 
 								}
 							}
-							fftw_execute_r2r(plan_r2hc,
+							fftw_execute_r2r(plan_timeslice_r2hc,
 									timeslice_r,
 									timeslice_hc
 									);
@@ -1395,7 +1398,7 @@ namespace CookieBox_pkg {
 							}      
 							*/
 
-							fftw_execute_r2r(plan_hc2r,
+							fftw_execute_r2r(plan_timeslice_hc2r,
 									timeslice_hc,
 									timeslice_r
 									);
@@ -1451,9 +1454,17 @@ namespace CookieBox_pkg {
 
 			}
 		}
-		std::cerr << "Leaving printSpectraLegendre()" << std::endl;
-		return true;
+		std::cerr << "Leaving printSpectraLegendre()\n Destroying fftw plan_timeslice_(r2hc/hc2r)" << std::endl;
 
+		fftw_free(timeslice_r);
+		fftw_free(timeslice_hc);
+		fftw_free(rollslice_r);
+		fftw_free(rollslice_hc);
+
+		if (plan_timeslice_r2hc != NULL) { fftw_destroy_plan(plan_timeslice_r2hc); }
+		if (plan_timeslice_hc2r != NULL) { fftw_destroy_plan(plan_timeslice_hc2r); }
+
+		return true;
 	}
 	bool CookieBox_mod::print_patch_results(void)
 	{
@@ -1861,7 +1872,7 @@ namespace CookieBox_pkg {
 		double * timeslice_r = (double *) fftw_malloc(sizeof(double) * sz);
 		double * timeslice_hc = (double *) fftw_malloc(sizeof(double) * sz);
 
-		fftw_plan plan_r2hc = fftw_plan_r2r_1d(sz,
+		fftw_plan plan_timeslice_r2hc = fftw_plan_r2r_1d(sz,
 				timeslice_r,
 				timeslice_hc, 
 				FFTW_R2HC,
@@ -1908,7 +1919,7 @@ namespace CookieBox_pkg {
 						outfile << mean << "\t";
 						mean = removemean(timeslice_r,sz);
 						outfile << mean << "\t";
-						fftw_execute_r2r(plan_r2hc,
+						fftw_execute_r2r(plan_timeslice_r2hc,
 								timeslice_r,
 								timeslice_hc
 								);
@@ -1927,8 +1938,8 @@ namespace CookieBox_pkg {
 		}
 		if (timeslice_r != NULL){fftw_free(timeslice_r);timeslice_r = NULL;}
 		if (timeslice_hc != NULL){fftw_free(timeslice_hc);timeslice_hc = NULL;}
-		if (plan_r2hc != NULL)
-			fftw_destroy_plan(plan_r2hc);
+		if (plan_timeslice_r2hc != NULL)
+			fftw_destroy_plan(plan_timeslice_r2hc);
 		return true;
 	}
 

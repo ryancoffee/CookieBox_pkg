@@ -185,8 +185,8 @@ class CookieBox_mod
 			READ_CorrFactorsMemFuncPtr read_corr_factors;
 			READ_E2T_ConversionMemFuncPtr read_e2t_conversion;
 
-	fftw_plan plan_r2hc;
-	fftw_plan plan_hc2r;
+			fftw_plan plan_r2hc;
+			fftw_plan plan_hc2r;
 
 			// member objects //
 			Ebeam m_eb;

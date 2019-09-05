@@ -6,6 +6,8 @@
 #include <algorithm>
 #include <iostream>
 #include <fstream>
+#include <memory>
+#include <fftw/fftw3.h>
 
 using namespace CookieBox_pkg;
 
@@ -38,7 +40,6 @@ namespace CookieBox_pkg
 	{
 		if (m_outfile.is_open())
 			m_outfile.close();
-		//std::cerr << "Now killing off fftw vectors" << std::endl;
 		if (wf_y != NULL){ fftw_free(wf_y); }
 		if (wf_ddy != NULL) { fftw_free(wf_ddy); }
 		if (wf_Y_hc != NULL) { fftw_free(wf_Y_hc); }
@@ -81,16 +82,20 @@ namespace CookieBox_pkg
 		std::copy(rhs.m_lims.begin(),rhs.m_lims.end(),m_lims.begin());
 		std::copy(rhs.m_baselims.begin(),rhs.m_baselims.end(),m_baselims.begin());
 		init();
+		pointplans(rhs);
 		deepcopy_data(rhs);
 
 	}
 	void Acqiris::deepcopy_data(const Acqiris & b)
 	{
 		m_data.resize(b.m_data.size());
-		for ( unsigned i=0;i<b.m_data.size();++i){
+		m_data_dbl.resize(b.m_data_dbl.size());
+		for ( unsigned i=0;i<b.m_data_dbl.size();++i){
 			m_data[i].resize(b.m_data[i].size());
+			m_data_dbl[i].resize(b.m_data_dbl[i].size());
 			for (unsigned j=0;j<b.m_data[i].size();++j)
 				m_data[i][j] = b.m_data[i][j];
+				m_data_dbl[i][j] = b.m_data_dbl[i][j];
 		}
 	}
 
@@ -130,31 +135,34 @@ namespace CookieBox_pkg
 
 		std::cerr << "... plans \n" << std::flush;
 
-		setplans(rhs);
+		plan_r2hc_Ptr = NULL;
+		plan_hc2r_Ptr = NULL;
 
 		std::cerr << "OK, fftw for Acqiris is initialized \n" << std::flush;
 		return true;
 	}
-	void Acqiris::setplans(const Acqiris & rhs)
+	void Acqiris::pointplans(const Acqiris & rhs)
 	{
 		plan_r2hc_Ptr = rhs.plan_r2hc_Ptr;
-		plan_hc2r_Ptr = rhs.plan_hc2r_dPtr;
+		plan_hc2r_Ptr = rhs.plan_hc2r_Ptr;
 	}
 
 	void Acqiris::setmasterplans(fftw_plan * const forward,fftw_plan * const backward)
 	{
-		assert(plan_r2hc_Ptr.use_count()==0 && plan_hc2r_Ptr.use_count()==0);
+		//assert(plan_r2hc_Ptr.use_count()==0 && plan_hc2r_Ptr.use_count()==0);
 		size_t sz = m_lims.at(bins);
-		*forward = fftw_plan_r2hc(sz,
+		*forward = fftw_plan_r2r_1d(sz,
 				wf_y,
-				wf_Y,	
+				wf_Y_hc,	
+				FFTW_R2HC,
 				FFTW_ESTIMATE);
-		*backward = fftw_plan_hc2r(sz,
+		*backward = fftw_plan_r2r_1d(sz,
 				wf_Y_hc,
 				wf_y,
+				FFTW_HC2R,
 				FFTW_ESTIMATE);
-		plan_r2hc_Ptr = std::make_shared<fftw_plan> (*forward);
-		plan_hc2r_Ptr = std::make_shared<fftw_plan> (*backward);
+		plan_r2hc_Ptr = forward;
+		plan_hc2r_Ptr = backward;
 
 	}
 
@@ -171,7 +179,8 @@ namespace CookieBox_pkg
 		boost::shared_ptr< ndarray<double,1> > outmatPtr = boost::make_shared < ndarray<double,1> > ( shape );
 
 		for (unsigned j=0;j<m_data[chan].size();++j){
-			(*outmatPtr)[j] = m_data[chan][j];
+			//(*outmatPtr)[j] = m_data[chan][j];
+			(*outmatPtr)[j] = m_data_dbl[chan][j];
 		}
 		evt.put(outmatPtr,outkey);
 	}
@@ -186,7 +195,8 @@ namespace CookieBox_pkg
 
 		for (unsigned i = 0; i < m_data.size();++i){ 
 			for (unsigned j=0;j<m_data[i].size();++j){
-				(*outmatPtr)[i][j] = m_data[i][j];
+				//(*outmatPtr)[i][j] = m_data[i][j];
+				(*outmatPtr)[i][j] = m_data_dbl[i][j];
 			}
 		}
 		evt.put(outmatPtr,outkey);
@@ -204,15 +214,13 @@ namespace CookieBox_pkg
 		// use this method to fill a slice of the multi_array, but incorporating the Y conv ddY filter, where we want the histogram.
 		m_srcPtr = evt.get(m_srcStr);
 		if (!m_srcPtr.get()){return false;}
-		//std::cerr << "m_nchannels in Acqiris::fill() = " << m_nchannels << std::endl;
 		if (m_getConfig){std::cout << getConfig(env);}
-		//std::cerr << "m_nchannels in Acqiris::fill() after m_getConfig test = " << m_nchannels << std::endl;
 
-		if (m_data.size() != m_nchannels)
-			m_data.resize(m_nchannels);
-		if (m_data.back().size() != m_lims.at(bins)){
-			for (unsigned c=0;c<m_data.size();++c)
-				m_data[c].resize(m_lims.at(bins),0);
+		if (m_data_dbl.size() != m_nchannels)
+			m_data_dbl.resize(m_nchannels);
+		if (m_data_dbl.back().size() != m_lims.at(bins)){
+			for (unsigned c=0;c<m_data_dbl.size();++c)
+				m_data_dbl[c].resize(m_lims.at(bins),0);
 		}
 
 		for (unsigned chan=0;chan<m_nchannels;++chan){
@@ -227,19 +235,15 @@ namespace CookieBox_pkg
 				basesum += wf[segment][s];
 			}
 
-			//HERE HERE HERE HERE working on the fftw for sake of Y conv ddY filtering
-
-
 			size_t sz = m_lims.at(bins);
 			for (unsigned s = 0; s < sz; ++s) {
 				long int val = (wf[segment][m_lims.at(start) + s] - basesum/m_baselims.at(bins));
 				if (m_invert)
 					val *= -1;
 				wf_y[s] = double(val);
-				m_data.at(chan).at(s) = val;
 			}
 
-			fftw_execute_r2r(*plan_r2hc_Ptr.get(), wf_y, wf_Y_hc );
+			fftw_execute_r2r(*plan_r2hc_Ptr, wf_y, wf_Y_hc );
 
 			unsigned bwd = sz/3;
 			wf_DDY_hc[0] = 0.;
@@ -254,16 +258,18 @@ namespace CookieBox_pkg
 				wf_Y_hc[s] = wf_Y_hc[sz-s] = wf_DDY_hc[s] = wf_DDY_hc[sz-s] = 0.;
 			}
 
-			fftw_execute_r2r(*plan_hc2r_Ptr.get(), wf_Y_hc, wf_y );
-			fftw_execute_r2r(*plan_hc2r_Ptr.get(), wf_DDY_hc, wf_ddy );
+			fftw_execute_r2r(*plan_hc2r_Ptr, wf_Y_hc, wf_y);
+			fftw_execute_r2r(*plan_hc2r_Ptr, wf_DDY_hc, wf_ddy );
 
 			double thresh = 5.e-5;
 			for ( unsigned s=0; s<sz; ++s){
 				double res = 0.;
+				m_data_dbl.at(chan).at(s) = res;
 				if ( (wf_y[s] > 0.) && (wf_ddy[s] < 0.)){
 					res = wf_y[s] * -1. * wf_ddy[s] / thresh;	
-					if (res > 1){					
-						slice[chan][s] += std::log(res);
+					if (res > 0.99){					
+						slice[chan][s] += int(res);
+						m_data_dbl.at(chan).at(s) = res;
 					}
 				}
 			}
@@ -280,7 +286,6 @@ namespace CookieBox_pkg
 
 		//std::cerr << "m_nchannels in Acqiris::fill() = " << m_nchannels << std::endl;
 		if (m_getConfig){std::cout << getConfig(env);}
-		//std::cerr << "m_nchannels in Acqiris::fill() after m_getConfig test = " << m_nchannels << std::endl;
 
 		if (m_data.size() != m_nchannels)
 			m_data.resize(m_nchannels);
@@ -317,9 +322,7 @@ namespace CookieBox_pkg
 		m_srcPtr = evt.get(m_srcStr);
 		if (!m_srcPtr.get()){return false;}
 
-		//std::cerr << "m_nchannels in Acqiris::fill() = " << m_nchannels << std::endl;
 		if (m_getConfig){std::cout << getConfig(env);}
-		//std::cerr << "m_nchannels in Acqiris::fill() after m_getConfig test = " << m_nchannels << std::endl;
 
 		if (m_data.size() != m_nchannels)
 			m_data.resize(m_nchannels);
@@ -329,12 +332,6 @@ namespace CookieBox_pkg
 		}
 
 		for (unsigned chan=0;chan<m_nchannels;++chan){
-			// wf_t wf = m_srcPtr->data(chan).waveforms(); // the 2D'ness of this is for the unused segments, not the channels.
-			// Also, we define it here since as an interface, 
-			// it won't get used elsewhere and therefore should live on the stack.. .not heap as with new .. and delete...
-			// I now also see that since I'm burying the wf type in the function, 
-			// I want something in the .h file where I can tweak the types... thus the typedef ndarray<short,2> wf_t;
-
 			const Psana::Acqiris::DataDescV1Elem& elem = m_srcPtr->data(chan);
 			wf_t wf = elem.waveforms(); // the 2D'ness of this is for the unused segments, not the channels.
 
@@ -358,16 +355,10 @@ namespace CookieBox_pkg
 
 	bool Acqiris::fill(Event& evt, Env& env)
 	{
-		// HERE HERE HERE //
-		// Using this one //
-		// find a way to get the time-vector start value and step.
-		// Use that to compute an offset
 		m_srcPtr = evt.get(m_srcStr);
 		if (!m_srcPtr.get()){return false;}
 
-		std::cerr << "trying to test to getConfig() in Acqiris::fill() method" << std::endl;
 		if (m_getConfig){std::cout << getConfig(env);}
-		std::cerr << "m_nchannels = " << m_nchannels << std::endl;
 
 
 		if (m_data.size() != m_nchannels)
@@ -376,33 +367,15 @@ namespace CookieBox_pkg
 			for (unsigned c=0;c<m_data.size();++c)
 				m_data[c].resize(m_lims.at(bins),0);
 		}
-		//std::cerr << "m_data.size() = " << m_data.size() << std::endl;
-		//std::cerr << "m_data.back().size() = " << m_data.back().size() << std::endl;
 
 		for (unsigned chan=0;chan<m_nchannels;++chan){
 			const unsigned segment = 0; // [chris ogrady] always 0 for LCLS data taken so far (a feature of the acqiris we don't use)
 			const Psana::Acqiris::DataDescV1Elem& elem = m_srcPtr->data(chan);
-			//std::cerr << "filling channel " << chan << std::flush;
 			const ndarray<const Psana::Acqiris::TimestampV1, 1>& timestamps = elem.timestamp();
 			double pos = timestamps[segment].pos();
 			int indexFirstPoint = elem.indexFirstPoint();
 			int indoffset = int(pos*2./m_sampleInterval)/2;
 			wf_t wf = elem.waveforms(); 
-			// the 2D'ness of this is for the unused segments, not the channels.
-			// Also, we define it here since as an interface, 
-			// it won't get used elsewhere and therefore should live on the stack.. .not heap as with new .. and delete...
-			// I now also see that since I'm burying the wf type in the function, 
-			// I want something in the .h file where I can tweak the types... thus the typedef ndarray<short,2> shortwf_t;
-
-			// HERE HERE HERE HERE //
-			// Debugging the indices and the clock start time //
-			// here the 0th index can correspond to a time form 0 back to the increment size (.5ns) here 
-			// This means we could sub-divide the waveforms for computing the energy simply by adjusting by this offset.
-	   //const unsigned shape[] = {nbrChannels, nbrSamples};
-	   //    ndarray<wform_t, 2> wf = make_ndarray<wform_t>(nbrChannels, nbrSamples);
-	   //        ndarray<wtime_t, 2> wt = make_ndarray<wtime_t>(nbrChannels, nbrSamples);
-	   //
-
 
 			long long basesum;
 			basesum = 0;
@@ -410,7 +383,6 @@ namespace CookieBox_pkg
 				// fill baseline //
 				basesum += wf[segment][s] - m_vert_offset[chan];
 			}
-			//std::cerr << "\t ... got baseline channel " << chan << std::flush;
 			for (unsigned s = 0; s < m_lims.at(bins); ++s) {
 				//long int val = (wf[segment][m_lims.at(start) + s] - basesum/m_baselims.at(bins));
 				long int val = 0;
@@ -431,7 +403,6 @@ namespace CookieBox_pkg
 					val *= -1;
 				m_data.at(chan).at(s) = val;
 			}
-			//std::cerr << "\t ... filled channel " << chan << std::endl;
 		}
 		return true;
 	}
@@ -517,12 +488,27 @@ namespace CookieBox_pkg
 		m_outfile.open(eventfilename.c_str(),std::ios::out);
 		if (!m_outfile.is_open())
 			return false;
-		for (unsigned s=0;s<m_data.at(0).size();++s){
-			for (unsigned c=0;c<m_data.size();++c){
-				long int val = m_data.at(c).at(s);
-				m_outfile << val << "\t";
+		if (m_data_dbl.size() == m_nchannels){
+			for (unsigned s=0;s<m_data_dbl.at(0).size();++s){
+				for (unsigned c=0;c<m_data_dbl.size();++c){
+					double val = m_data_dbl.at(c).at(s);
+					m_outfile << val << "\t";
+				}
+				m_outfile << "\n";
 			}
-			m_outfile << "\n";
+		} else {
+			if (m_data.size() == m_nchannels) {
+				for (unsigned s=0;s<m_data.at(0).size();++s){
+					for (unsigned c=0;c<m_data.size();++c){
+						long int val = m_data.at(c).at(s);
+						m_outfile << val << "\t";
+					}
+					m_outfile << "\n";
+				}
+			} else {
+				m_outfile.close();
+				return false;
+			}
 		}
 		m_outfile.close();
 		return true;
