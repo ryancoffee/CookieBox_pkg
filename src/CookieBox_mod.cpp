@@ -486,7 +486,7 @@ namespace CookieBox_pkg {
 			++ m_failed_event.at(m_rank);
 			return; // if processing fails, return from event
 		}
-		std::cout << " finished event " << m_count_event.at(m_rank) << " for rank " << m_rank << std::endl;
+		//std::cout << " finished event " << m_count_event.at(m_rank) << " for rank " << m_rank << std::endl;
 
 		return;
 	}
@@ -744,8 +744,8 @@ namespace CookieBox_pkg {
 		} // endif m_learn.use()
 
 		
-		std::cout << "\n\t\t --- finished event " << m_count_event.at(m_rank) 
-			<< " --- \n \t\t --- at rank " << m_rank << "---" << std::endl;
+		//std::cout << "\n\t\t --- finished event " << m_count_event.at(m_rank) 
+			//<< " --- \n \t\t --- at rank " << m_rank << "---" << std::endl;
 		return true;
 	}
 

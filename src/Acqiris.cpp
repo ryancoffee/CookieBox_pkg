@@ -8,6 +8,8 @@
 #include <fstream>
 #include <memory>
 #include <fftw/fftw3.h>
+#include <cmath>
+//#include "CookieBox_pkg/Constants.hpp"
 
 using namespace CookieBox_pkg;
 
@@ -179,8 +181,8 @@ namespace CookieBox_pkg
 		boost::shared_ptr< ndarray<double,1> > outmatPtr = boost::make_shared < ndarray<double,1> > ( shape );
 
 		for (unsigned j=0;j<m_data[chan].size();++j){
-			//(*outmatPtr)[j] = m_data[chan][j];
-			(*outmatPtr)[j] = m_data_dbl[chan][j];
+			(*outmatPtr)[j] = m_data[chan][j];
+			//(*outmatPtr)[j] = m_data_dbl[chan][j];
 		}
 		evt.put(outmatPtr,outkey);
 	}
@@ -195,8 +197,8 @@ namespace CookieBox_pkg
 
 		for (unsigned i = 0; i < m_data.size();++i){ 
 			for (unsigned j=0;j<m_data[i].size();++j){
-				//(*outmatPtr)[i][j] = m_data[i][j];
-				(*outmatPtr)[i][j] = m_data_dbl[i][j];
+				(*outmatPtr)[i][j] = m_data[i][j];
+				//(*outmatPtr)[i][j] = m_data_dbl[i][j];
 			}
 		}
 		evt.put(outmatPtr,outkey);
@@ -216,12 +218,20 @@ namespace CookieBox_pkg
 		if (!m_srcPtr.get()){return false;}
 		if (m_getConfig){std::cout << getConfig(env);}
 
+		if (m_data.size() != m_nchannels)
+			m_data.resize(m_nchannels);
+		if (m_data.back().size() != m_lims.at(bins)){
+			for (unsigned c=0;c<m_data.size();++c)
+				m_data[c].resize(m_lims.at(bins),0);
+		}
+		/*
 		if (m_data_dbl.size() != m_nchannels)
 			m_data_dbl.resize(m_nchannels);
 		if (m_data_dbl.back().size() != m_lims.at(bins)){
 			for (unsigned c=0;c<m_data_dbl.size();++c)
 				m_data_dbl[c].resize(m_lims.at(bins),0);
 		}
+		*/
 
 		for (unsigned chan=0;chan<m_nchannels;++chan){
 			wf_t wf = m_srcPtr->data(chan).waveforms(); // the 2D'ness of this is for the unused segments, not the channels.
@@ -243,16 +253,17 @@ namespace CookieBox_pkg
 				wf_y[s] = double(val);
 			}
 
+			// fftw makes un-normalized transforms, so we need to divid by root(n) for each transform (or n for each back and forth
 			fftw_execute_r2r(*plan_r2hc_Ptr, wf_y, wf_Y_hc );
 
 			unsigned bwd = sz/3;
 			wf_DDY_hc[0] = 0.;
 			for( unsigned s=1;s<bwd;++s){
-				double lpf = (std::cos(double(s)/(double)bwd),int(2));
+				double lpf = (std::cos(double(s)/(double)bwd *  M_PI),int(2));
 				wf_Y_hc[s] *= lpf;
 				wf_Y_hc[sz-s] *= lpf;
-				wf_DDY_hc[s] = -std::pow(double(s),int(2)) * wf_Y_hc[s];
-				wf_DDY_hc[sz-s] = -std::pow(double(s),int(2)) * wf_Y_hc[sz-s];
+				wf_DDY_hc[s] = -std::pow(double(s),int(2))/std::pow(double(bwd),int(2)) * wf_Y_hc[s];
+				wf_DDY_hc[sz-s] = -std::pow(double(s),int(2))/std::pow(double(bwd),int(2)) * wf_Y_hc[sz-s];
 			}	
 			for( unsigned s=bwd;s<sz/2;++s){
 				wf_Y_hc[s] = wf_Y_hc[sz-s] = wf_DDY_hc[s] = wf_DDY_hc[sz-s] = 0.;
@@ -261,15 +272,18 @@ namespace CookieBox_pkg
 			fftw_execute_r2r(*plan_hc2r_Ptr, wf_Y_hc, wf_y);
 			fftw_execute_r2r(*plan_hc2r_Ptr, wf_DDY_hc, wf_ddy );
 
-			double thresh = 5.e-5;
+			double thresh = 1.e5; // this is actually about 1/2 of the single counts, but the log2 function will send this to below 1 and get ignored
 			for ( unsigned s=0; s<sz; ++s){
 				double res = 0.;
-				m_data_dbl.at(chan).at(s) = res;
+				m_data.at(chan).at(s) = int(res);
+				//m_data_dbl.at(chan).at(s) = res;
 				if ( (wf_y[s] > 0.) && (wf_ddy[s] < 0.)){
-					res = wf_y[s] * -1. * wf_ddy[s] / thresh;	
-					if (res > 0.99){					
+					res = wf_y[s] * -1. * wf_ddy[s] * std::pow(sz,int(-2)) / thresh; // this normalizes	
+					res = log2(res); // using the to supress the pileup
+					if (res >= 1.){					
 						slice[chan][s] += int(res);
-						m_data_dbl.at(chan).at(s) = res;
+						m_data.at(chan).at(s) = int(res);
+						//m_data_dbl.at(chan).at(s) = res;
 					}
 				}
 			}
@@ -488,11 +502,10 @@ namespace CookieBox_pkg
 		m_outfile.open(eventfilename.c_str(),std::ios::out);
 		if (!m_outfile.is_open())
 			return false;
-		if (m_data_dbl.size() == m_nchannels){
+		if (m_data_dbl.size() == m_nchannels && false){
 			for (unsigned s=0;s<m_data_dbl.at(0).size();++s){
 				for (unsigned c=0;c<m_data_dbl.size();++c){
-					double val = m_data_dbl.at(c).at(s);
-					m_outfile << val << "\t";
+					m_outfile << m_data_dbl.at(c).at(s) << "\t";
 				}
 				m_outfile << "\n";
 			}
@@ -500,8 +513,7 @@ namespace CookieBox_pkg
 			if (m_data.size() == m_nchannels) {
 				for (unsigned s=0;s<m_data.at(0).size();++s){
 					for (unsigned c=0;c<m_data.size();++c){
-						long int val = m_data.at(c).at(s);
-						m_outfile << val << "\t";
+						m_outfile << m_data.at(c).at(s) << "\t";
 					}
 					m_outfile << "\n";
 				}
