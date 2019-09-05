@@ -19,6 +19,8 @@
 #include <list>
 #include <fstream>	
 #include "CookieBox_pkg/dataops.h"
+//#include <boost/cstdint.hpp>
+#include <stdint.h>
 
 namespace CookieBox_pkg {
 
@@ -27,9 +29,9 @@ class Acqiris
 	typedef ndarray<const short int,2> wf_t;
 	typedef ndarray<const double,2> wt_t;
 	typedef boost::multi_array_types::index_range ind_range;
-	typedef boost::multi_array<long long,4>::array_view<1>::type a4d_ll_1dview_t;
-	typedef boost::multi_array<long long,4>::array_view<2>::type a4d_ll_2dview_t;
-	typedef boost::multi_array<long long,4>::array_view<2>::type a5d_ll_2dview_t;
+	typedef boost::multi_array<uint32_t,4>::array_view<1>::type a4d_ll_1dview_t;
+	typedef boost::multi_array<uint32_t,4>::array_view<2>::type a4d_ll_2dview_t;
+	typedef boost::multi_array<uint32_t,4>::array_view<2>::type a5d_ll_2dview_t;
 
 	public:
 		enum LimsInd {start,stop,bins};
@@ -48,6 +50,9 @@ class Acqiris
 		bool init( void);
 		void setmasterplans(fftw_plan * const forward,fftw_plan * const backward);
 		void pointplans(const Acqiris & rhs);
+		void pointplans(fftw_plan * const forward,fftw_plan * const backward);
+		void detachplans();
+		void setthresh(std::vector<double> in);
 
 		inline bool use(bool in){m_use = in;return m_use;}
 		inline bool use(void){return m_use;}
@@ -107,8 +112,8 @@ class Acqiris
 		Source m_srcStr;
 		Pds::Src m_src;
 
-		std::vector< std::vector<long int> > m_data;
-		std::vector< std::vector<double> > m_data_dbl;
+		std::vector< std::vector<int16_t> > m_data;
+		std::vector< double > m_thresh;
 
 		unsigned m_nchannels;
 		unsigned m_max_samples;

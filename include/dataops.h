@@ -195,21 +195,11 @@ namespace CookieBox_pkg {
 			}
 			return ins;
 		}
-		/*
-	template <typename T, int dim>
-		std::ostream& operator << (std::ostream & outs, boost::multi_array<T,dim> & record)
-		{
-			for (unsigned i=0;i<record.shape()[0];++i){
-				outs << record[i] << "\t";
-			}
-			outs << std::flush;
-			return outs;
-		}
-		*/
 	template <typename T,typename V>
 		std::ostream& operator << (std::ostream & outs, std::pair<T,V> outpair)
 		{
 			outs << "(" << outpair.first << "," << outpair.second << ")\t" << std::flush;
+			return outs;
 		}
 	template <typename T>
 		std::ostream& operator << (std::ostream & outs, std::vector< T > & vec)
@@ -331,6 +321,7 @@ namespace CookieBox_pkg {
 			assert(ip!=T(0));
 			T scale = T(1)/std::sqrt(ip);
 			std::transform(in.begin(), in.end(), in.begin(), std::bind2nd(std::multiplies<T>(),scale) );
+			return;
 		}
 	template <typename T>
 		inline void sqr_normalize(std::vector<T> & in,std::vector<bool>& mask)
@@ -346,12 +337,14 @@ namespace CookieBox_pkg {
 			assert(ip!=T(0) && n!=0);
 			T scale = std::sqrt(T(n)/ip);
 			std::transform(in.begin(), in.end(), in.begin(), std::bind2nd(std::multiplies<T>(),scale) );
+			return;
 		}
 	template <typename T>
 		inline void sqr_normalize(std::vector<T> & in) {
 			T scale = sqrt( std::inner_product(in.begin(), in.end(), in.begin(),T(0)) );
 			assert(scale != T(0));
 			std::transform(in.begin(), in.end(), in.begin(), std::bind2nd(std::multiplies<T>(),T(in.size())/scale) );
+			return;
 		};
 	template <typename T>
 		inline T removemean(T* in, size_t sz) {
@@ -407,6 +400,7 @@ namespace CookieBox_pkg {
 			}
 			T sq_sum = std::inner_product(diff.begin(),diff.end(),diff.begin(),T(0));
 			std = std::sqrt(sq_sum / T(diff.size()));
+			return;
 		}
 
 	template <typename T>
@@ -445,14 +439,6 @@ namespace CookieBox_pkg {
 		}
 		return;
 	}
-	/*
-	std::istream& operator >> ( std::istream & ins, std::vector<double> & record );
-	std::istream& operator >> ( std::istream& ins, std::vector< std::vector <double> > & data );
-	std::istream& operator >> ( std::istream & ins, record_f & record );
-	std::istream& operator >> ( std::istream& ins, data_f & data );
-	std::istream& operator >> ( std::istream & ins, record_s & record );
-	std::istream& operator >> ( std::istream& ins, data_s & data );
-	*/
 
 }
 

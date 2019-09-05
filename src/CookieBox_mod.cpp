@@ -72,11 +72,11 @@ namespace CookieBox_pkg {
 	{
 		// get the values from configuration or use defaults
 		m_printMarkusLegendresCompare = config("printMarkusLegendresCompare",false);
-		m_skipIDs = configList("skipIDs");
+		m_skipIDs = (configList("skipIDs") ) ;
 		m_print_every = config("print_every",10);
 		if (m_print_every < 1) {m_print_every = 1;}
-		std::vector<bool> use_logic = configList("use_logic");
-		std::vector<bool> print_logic = configList("print_logic");
+		std::vector<bool> use_logic = (configList("use_logic")) ;
+		std::vector<bool> print_logic =  (configList("print_logic") ) ;
 		std::vector<bool>::iterator logic_itr = use_logic.begin();
 		std::vector<bool>::iterator print_itr = print_logic.begin();
 
@@ -95,8 +95,8 @@ namespace CookieBox_pkg {
 		if (m_xt.use(*logic_itr)){
 			m_xt.init( (configList("xt_downsample_steps")) , config("xt_threshold",0));
 			m_xt.srcStr(configSrc("xt_source","DetInfo(:Opal1k.0)"));
-			m_xt.valhist_init( (configList("xt_valhist_list") ) );
-			m_xt.set_crop( (configList("xt_crop")) );
+			m_xt.valhist_init( (configList("xt_valhist_list") ) ) ;
+			m_xt.set_crop(  (configList("xt_crop")) );
 			m_xt.print(*print_itr);
 			m_xt.addimages(config("add_images_as_features", false));
 			m_xt.print_avg(config("avg_xt_images", false));
@@ -120,7 +120,7 @@ namespace CookieBox_pkg {
 			if ( m_ta.remove_dark( config("ta_remove_dark",false)) || m_ta.write_dark(config("ta_write_dark",true)) ){
 				m_ta.dark_file(configStr("ta_dark_file","amoi0314_data/transabs/darkfile.r0214")) ;
 				if ( m_ta.write_dark() ){
-					std::vector<std::string> darkstagelist = configList("ta_dark_stage_position_list");
+					std::vector<std::string> darkstagelist =  (configList("ta_dark_stage_position_list")) ;
 					unsigned ndarks = m_ta.fill_dark_stage_position_list(darkstagelist) ;
 					if (ndarks<1){
 						std::cerr << "failed to pass config params to m_ta.fill_dark_stage_position_list(darkstagelist)" << std::endl;
@@ -141,49 +141,50 @@ namespace CookieBox_pkg {
 		logic_itr = use_logic.begin() + use_gd;
 		print_itr = print_logic.begin() + print_gd;
 		if (m_gd.use(*logic_itr)){
-			std::vector<unsigned> gd_bins_in = configList("gd_bins_list");
-			std::vector<double> gd_mins_in = configList("gd_mins_list");
-			std::vector<double> gd_maxs_in = configList("gd_maxs_list");
+			std::vector<unsigned> gd_bins_in = (configList("gd_bins_list")) ;
+			std::vector<double> gd_mins_in = (configList("gd_mins_list")) ;
+			std::vector<double> gd_maxs_in = (configList("gd_maxs_list")) ;
 			m_gd.init(gd_bins_in, gd_mins_in, gd_maxs_in);
 			m_gd.srcStr(configSrc("gd_source","BldInfo(FEEGasDetEnergy)"));
 			m_gd.print(*print_itr);
 			m_gwin.resize(2);
-			m_gwin = configList("patch_gd_win");
+			m_gwin = (configList("patch_gd_win")) ;
 
 		}
 
 		logic_itr = use_logic.begin() + use_eb;
 		print_itr = print_logic.begin() + print_eb;
 		if (m_eb.use(*logic_itr)){
-			std::vector<unsigned> eb_bins_in = configList("eb_bins_list");
-			std::vector<double> eb_mins_in = configList("eb_mins_list");
-			std::vector<double> eb_maxs_in = configList("eb_maxs_list");
+			std::vector<unsigned> eb_bins_in =  (configList("eb_bins_list")) ;
+			std::vector<double> eb_mins_in = (configList("eb_mins_list")) ;
+			std::vector<double> eb_maxs_in = (configList("eb_maxs_list")) ;
 			m_eb.init(eb_bins_in, eb_mins_in, eb_maxs_in);
 			m_eb.srcStr(configSrc("eb_source", "BldInfo(EBeam)"));
 			m_eb.print(*print_itr);
 			m_ewin.resize(2);
-			m_ewin = configList("patch_eb_win");
+			m_ewin = (configList("patch_eb_win")) ;
 		}
 
 		logic_itr = use_logic.begin() + use_tt;
 		print_itr = print_logic.begin() + print_tt;
 		if (m_tt.use(*logic_itr)){
-			std::vector<unsigned> tt_bins_in = (configList("tt_bins_list"));
-			std::vector<double> tt_mins_in = (configList("tt_mins_list"));
-			std::vector<double> tt_maxs_in = (configList("tt_maxs_list"));
+			std::vector<unsigned> tt_bins_in = (configList("tt_bins_list")) ;
+			std::vector<double> tt_mins_in = (configList("tt_mins_list")) ;
+			std::vector<double> tt_maxs_in = (configList("tt_maxs_list")) ;
 			m_tt.init(tt_bins_in, tt_mins_in, tt_maxs_in);
 			m_tt.use_filter(config("tt_use_filter",false));
-			std::vector<double> tt_calib_in = (configList("tt_calib_list"));
+			std::vector<double> tt_calib_in = (configList("tt_calib_list")) ;
 			m_tt.setTimeCalib(tt_calib_in);
 			m_tt.srcStr(configSrc("tt_source", "DetInfo(:Opal1k)"));
 			m_tt.print(*print_itr);
 			m_twin.resize(2);
-			m_twin = configList("patch_tt_win");
+			m_twin = (configList("patch_tt_win")) ;
 			if (config("tt_slicewin")){
-				m_tt.setslicewin(configList("tt_poswin"),
-						configList("tt_fwhmwin"),
-						configList("tt_amplwin"),
-						configList("tt_fwhmPamplwin"));
+				m_tt.setslicewin((configList("tt_poswin")) ,
+						(configList("tt_fwhmwin")) ,
+						(configList("tt_amplwin")) ,
+						(configList("tt_fwhmPamplwin")) 
+						);
 				}
 		}
 
@@ -194,9 +195,10 @@ namespace CookieBox_pkg {
 			unsigned totalchannels, samples;
 			totalchannels = 0;
 			samples = 0;
-			std::vector<std::string> aq_source_list = (configList("aq_source_list"));
-			std::vector<unsigned> aq_baseline_lims = (configList("aq_baseline_lims"));
-			std::vector<unsigned> aq_lims = (configList("aq_lims"));
+			std::vector<std::string> aq_source_list = ( (configList("aq_source_list")) );
+			std::vector<unsigned> aq_baseline_lims = ( (configList("aq_baseline_lims")) );
+			std::vector<unsigned> aq_lims = ( (configList("aq_lims")) );
+			std::vector<double> aq_thresh = ( (configList("aq_thresh_list")) );
 			m_aq.clear();
 			//Acqiris master(aq_lims,aq_baseline_lims);
 			//m_aq.resize(aq_source_list.size());
@@ -210,6 +212,7 @@ namespace CookieBox_pkg {
 				m_aq.back().use(*logic_itr);
 				m_aq.back().print(*print_itr);
 				m_aq.back().invert(config("aq_invert",false));
+				m_aq.back().setthresh(aq_thresh);
 				totalchannels += m_aq.back().nchannels();
 				unsigned s = m_aq.back().nsamples();
 				if ( samples < s)
@@ -220,8 +223,22 @@ namespace CookieBox_pkg {
 			std::cerr << "Exiting the locic_itr for initializing vector<m_aq>" << std::endl;
 			std::cerr << " totalchannels = " << totalchannels << std::endl;
 			m_patch_compute = config("patch_compute",false);
+			size_t sz = m_aq.front().nsamples();
+			double * y = (double *) fftw_malloc(sizeof(double) * sz);
+			double * Y_hc = (double *) fftw_malloc(sizeof(double) * sz);
+			plan_r2hc = fftw_plan_r2r_1d(sz,
+					y,
+					Y_hc,	
+					FFTW_R2HC,
+					FFTW_ESTIMATE);
+			plan_hc2r = fftw_plan_r2r_1d(sz,
+					Y_hc,
+					y,
+					FFTW_HC2R,
+					FFTW_ESTIMATE);
+			std::cerr << "fftw plans are set\n" << std::flush;
 		}
-		
+
 
 		logic_itr = use_logic.begin() + use_learn;
 		print_itr = print_logic.begin() + print_learn;
@@ -364,7 +381,7 @@ namespace CookieBox_pkg {
 					samples = m_aq[i].nsamples();
 
 				std::cerr << "m_aq[ " << i << " ].nsamples() = " << samples << "\n" << std::flush;
-				m_aq[i].setmasterplans(&plan_r2hc,&plan_hc2r);
+				m_aq[i].pointplans(&plan_r2hc,&plan_hc2r);
 
 				if ( m_eb.use() && m_gd.use() && m_tt.use() ) {
 					if (m_shots_4d.shape()[0] < m_tt.bins(TimeTool::delay)//delay) //pos)
@@ -376,7 +393,7 @@ namespace CookieBox_pkg {
 								[m_eb.bins(Ebeam::energy)]
 								[m_gd.bins(Gdet::average)]
 								[totalchannels]);
-						for(long long * it = m_shots_4d.origin(); it < m_shots_4d.origin() + m_shots_4d.num_elements() ; ++it)
+						for(uint32_t * it = m_shots_4d.origin(); it < m_shots_4d.origin() + m_shots_4d.num_elements() ; ++it)
 							*it = 0;
 					}
 
@@ -391,7 +408,7 @@ namespace CookieBox_pkg {
 								[m_gd.bins(Gdet::average)]
 								[totalchannels]
 								[samples]);
-						for(long long * it = m_data_5d.origin(); it < m_data_5d.origin() + m_data_5d.num_elements() ; ++it)
+						for(uint32_t * it = m_data_5d.origin(); it < m_data_5d.origin() + m_data_5d.num_elements() ; ++it)
 							*it = 0;
 					}
 				}
@@ -423,10 +440,10 @@ namespace CookieBox_pkg {
 			}
 			m_use_e2t = config("aq_useEnergyToTime",false);
 			if (m_use_e2t){
-				m_sp_projectionMask = (configList("sp_projectionMask"));
-				m_sp_binsvec = (configList("sp_bins_list"));
-				m_sp_startsvec = (configList("sp_starts_list"));
-				m_sp_stepsvec = (configList("sp_steps_list"));
+				m_sp_projectionMask = (configList("sp_projectionMask")) ;
+				m_sp_binsvec = (configList("sp_bins_list")) ;
+				m_sp_startsvec =  (configList("sp_starts_list")) ;
+				m_sp_stepsvec = (configList("sp_steps_list")) ;
 				std::string filename = (configStr("aq_transmissions_file","amoi0314_data/corr_factors.taylor")); 
 				if (! (this->*read_corr_factors)(filename)){
 					std::cerr << "Failed to set the transmission correction coefficients" << std::endl;
@@ -482,7 +499,7 @@ namespace CookieBox_pkg {
 			return; // if out of skip and limit bounds, return from event
 
 		if (!processEvent(evt,env)) {
-			std::cout << "processing event failed" << std::endl;
+			//std::cout << "rank " << m_rank << " processing event " << m_failed_event.at(m_rank) << " failed" << std::endl;
 			++ m_failed_event.at(m_rank);
 			return; // if processing fails, return from event
 		}
@@ -496,23 +513,16 @@ namespace CookieBox_pkg {
 	bool CookieBox_mod::sampleevery(unsigned in = 1)
 	{
 		if (in < 1){in = 1;}
-		std::cerr << "in sampleevery() method with m_count_event.at(m_rank) = " << std::flush;
-		std::cerr << m_count_event.at(m_rank) << "\n" << std::flush;
+		//std::cerr << "in sampleevery() method with m_count_event.at(m_rank) = " << std::flush;
+		//std::cerr << m_count_event.at(m_rank) << "\n" << std::flush;
 		return (m_count_event.at(m_rank)%in < 2);
 	}
 
 	bool CookieBox_mod::processEvent(Event& evt,Env& env)
 	{
-		// use evt.put(); to add variable for access later in douwnstream events //
-		// std::cout << "entered CookieBox_mod::processEvent() method" << std::endl;
-		/*
-		if (m_count_event.at(m_rank) %m_print_every < 2 || m_count_event.at(m_rank) > 3900){
-			std::cout << "beginning processing event " << m_count_event.at(m_rank) << std::endl;
-		}
-		*/
-
 		
 		bool gdslice = false;
+		//std::cerr << "at event " << m_count_event.at(m_rank) << "\n" << std::flush;
 		if( m_gd.use() ){
 			gdslice = m_gd.fill(evt,env);
 			if (!gdslice) {
@@ -565,7 +575,8 @@ namespace CookieBox_pkg {
 			unsigned startchanind = 0;
 			if (m_aq[i].use() 
 				&& m_eb.use() && m_gd.use() && m_tt.use()
-				&& m_eb.filled() && m_gd.filled() && m_tt.filled()){
+				&& m_eb.filled() && m_gd.filled() && m_tt.filled())
+			{
 				//a4d_ll_t::index_gen indices;
 				// now switching to 5d to include the timetool data in histogram 
 				a5d_ll_t::index_gen indices;
@@ -859,9 +870,6 @@ namespace CookieBox_pkg {
 		time(&m_endruntime);
 		double dtime = difftime(m_endruntime,m_beginruntime);
 		std::cout << "processing events took " << dtime << " seconds" << std::endl;
-		std::cerr << "destroying the fftwplans\n" << std::flush;
-		fftw_destroy_plan(plan_r2hc);
-		fftw_destroy_plan(plan_hc2r);
 		/*
 		if ( m_ta.use() && m_ta.print_avg() ){
 			std::cerr << "Failed to print TransAbs average" << std::endl;
@@ -901,94 +909,103 @@ namespace CookieBox_pkg {
 			}
 			std::cout << "returning from endRun() in rank " << m_rank ;
 			std::cout << " with failed events/total = " << m_failed_event.at(m_rank) << " / " << m_count_event.at(m_rank) << std::endl;
-			return;
 		}
 		std::cout << "finished collecting MPI" << std::endl;
 
-		if (m_learn.use()){
-			if ((bool)config("learn_write_pca",false)){ // if asked to write
-				if (!m_learn.write_pca(configStr("learn_pca_write_file"))){ // if failed to write when it was asked
-					std::cerr << "Seemed to have failed to m_learn.write_pca() in CookieBox_mod::endRun() method" << std::endl;
+		if (m_rank == m_root_rank)
+		{
+			if (m_learn.use()){
+				if ((bool)config("learn_write_pca",false)){ // if asked to write
+					if (!m_learn.write_pca(configStr("learn_pca_write_file"))){ // if failed to write when it was asked
+						std::cerr << "Seemed to have failed to m_learn.write_pca() in CookieBox_mod::endRun() method" << std::endl;
+					}
+				} else {
+					if (!m_learn.read_pca(configStr("learn_pca_read_file"))){ // if failed to write when it was asked
+						std::cerr << "Seemed to have failed to m_learn.read_pca() in CookieBox_mod::endRun() method" << std::endl;
+					}
+					m_learn.inspect_eigen_pca();
+					m_learn.print_eigenfaces( m_xt.eigenface_shape() );
 				}
-			} else {
-				if (!m_learn.read_pca(configStr("learn_pca_read_file"))){ // if failed to write when it was asked
-					std::cerr << "Seemed to have failed to m_learn.read_pca() in CookieBox_mod::endRun() method" << std::endl;
-				}
-				m_learn.inspect_eigen_pca();
-				m_learn.print_eigenfaces( m_xt.eigenface_shape() );
-			}
-			m_learn.compare_pca_images(m_testpca_features,m_xt.eigenface_shape(),m_xt.nonimage_features());
+				m_learn.compare_pca_images(m_testpca_features,m_xt.eigenface_shape(),m_xt.nonimage_features());
 
-			//m_learn.compare_pca_nonimage(m_testpca_features,m_xt.nonimage_features());
-			//m_learn.compare_pca(m_testpca_features);
-		} // end if m_learn.use()
+				//m_learn.compare_pca_nonimage(m_testpca_features,m_xt.nonimage_features());
+				//m_learn.compare_pca(m_testpca_features);
+			} // end if m_learn.use()
 
-		// HERE 
-		// do a comparison for this by constructing the pca after some number of shots, then compare for new shots as they come in.
-		// When two or more features are correlated, then we should plot the data in ortho and para for those components
-		// Let's also plot up the raw features as points and as parallel coords (with mean subtracted, and scaled by the variance in that dim)
-		// Another thing to try is to flatten machine features that have no correlation.... 
-		// check the gas dets since they are nearly perfectly correlated to make sure we're doing the right thing.
+			// HERE 
+			// do a comparison for this by constructing the pca after some number of shots, then compare for new shots as they come in.
+			// When two or more features are correlated, then we should plot the data in ortho and para for those components
+			// Let's also plot up the raw features as points and as parallel coords (with mean subtracted, and scaled by the variance in that dim)
+			// Another thing to try is to flatten machine features that have no correlation.... 
+			// check the gas dets since they are nearly perfectly correlated to make sure we're doing the right thing.
 
-		// technically we should close our files here //
-		if (m_eb.print())
-			m_eb.close_file();
-		if (m_tt.print())
-			m_tt.close_file();
+			// technically we should close our files here //
+			if (m_eb.print())
+				m_eb.close_file();
+			if (m_tt.print())
+				m_tt.close_file();
 			/*
-		if (m_ta.print())
-			m_ta.close_file();
-			*/
-		if (m_xt.print())
-			m_xt.close_file();
-		if (m_gd.print())
-			m_gd.close_file();
-		// etc... except that in the object destructor I test and close the files.
+			   if (m_ta.print())
+			   m_ta.close_file();
+			   */
+			if (m_xt.print())
+				m_xt.close_file();
+			if (m_gd.print())
+				m_gd.close_file();
+			// etc... except that in the object destructor I test and close the files.
 
 
 
-		// HERE printing out the 5D histogram as ascii... this is stupid//
-		std::cout << "printing out the spectra ... \t" << std::flush;
-		time_t starttime,stoptime;
-		float elapsed=0.;
-		time(&starttime);
-		if ( !(m_data_5d.num_elements() >0 && m_shots_4d.num_elements() > 0) ) {
-			std::cerr << "Unfilled m_data_5d.num_elements()" << std::endl;
-			return;
+			// HERE printing out the 5D histogram as ascii... this is stupid//
+			std::cout << "printing out the spectra ... \t" << std::flush;
+			time_t starttime,stoptime;
+			float elapsed=0.;
+			time(&starttime);
+			if ( !(m_data_5d.num_elements() >0 && m_shots_4d.num_elements() > 0) ) {
+				std::cerr << "Unfilled m_data_5d.num_elements()" << std::endl;
+				return;
+			}
+
+			if (!fillLegendreVecs()){std::cerr << "Failed to fillLegendreVecs()" << std::endl;}
+			// std::cerr << "Entering printSpectraLegendre() \n\n\n\n \t\t\t HERE I AM!! \n\n\n\n" << std::endl;
+			if (! printSpectraLegendre()){std::cerr << "Failed to printLegendreSpectra()" << std::endl;}
+			std::cerr << "Entering print_patch_results() " << std::endl;
+			if (m_patch_compute && !print_patch_results()) { std::cerr << "Failed printing patch results" << std::endl;}
+			//std::cout << "skipping/printing out the spectra ...\t" << std::flush;
+			std::cerr << "Entering printSpectra() " << std::endl;
+			//if (!printSpectra() ) {std::cerr << "Failed to printSpectra()" << std::endl;return;}
+			//if (!fftDiffSpectra()){std::cerr << "Failed to fftDiffSpectra()" << std::endl;return;}			
+
+			std::cout << "Putting back rotor projections of diff spectra for Kareem" << std::endl;
+			//std::cout << "Skipping rotor projections of diff spectra until there are proper rotor bases in time domain " << std::endl;
+			if (m_makeRotorProjections){
+				std::string orthofilename(configStr("sim_orthofile","amoi0314_data/transabs/ta-amoi0314-r0214.rank0.result.orthonorm.r.93.055"));
+				std::cerr << "Projecting spectra " << std::endl;
+				if (!projectDiffSpectra(orthofilename)){std::cerr << "Failed to projectDiffSpectra(orthofilename)" << std::endl;return;}
+			}
+
+
+			time(&stoptime);
+			elapsed = difftime(stoptime,starttime);
+			std::cout << elapsed << " seconds." << std::endl;
+			starttime = stoptime;
+			std::cout << "skipping/printing out the integration results ...\t" << std::flush;
+			/*
+			   if (!printIntegs()){
+			   std::cerr << "Failed to printIntegs()" << std::endl;
+			   return;
+			   }
+			   */
+			time(&stoptime);
+			elapsed = difftime(stoptime,starttime);
+			std::cout << elapsed << " seconds" << std::endl;
+
 		}
-
-		if (!fillLegendreVecs()){std::cerr << "Failed to fillLegendreVecs()" << std::endl;}
-		// std::cerr << "Entering printSpectraLegendre() \n\n\n\n \t\t\t HERE I AM!! \n\n\n\n" << std::endl;
-		if (! printSpectraLegendre()){std::cerr << "Failed to printLegendreSpectra()" << std::endl;}
-		std::cerr << "Entering print_patch_results() " << std::endl;
-		if (m_patch_compute && !print_patch_results()) { std::cerr << "Failed printing patch results" << std::endl;}
-		//std::cout << "skipping/printing out the spectra ...\t" << std::flush;
-		std::cerr << "Entering printSpectra() " << std::endl;
-		//if (!printSpectra() ) {std::cerr << "Failed to printSpectra()" << std::endl;return;}
-		//if (!fftDiffSpectra()){std::cerr << "Failed to fftDiffSpectra()" << std::endl;return;}			
-
-		std::cout << "Putting back rotor projections of diff spectra for Kareem" << std::endl;
-		//std::cout << "Skipping rotor projections of diff spectra until there are proper rotor bases in time domain " << std::endl;
-		if (m_makeRotorProjections){
-			std::string orthofilename(configStr("sim_orthofile","amoi0314_data/transabs/ta-amoi0314-r0214.rank0.result.orthonorm.r.93.055"));
-			std::cerr << "Projecting spectra " << std::endl;
-			if (!projectDiffSpectra(orthofilename)){std::cerr << "Failed to projectDiffSpectra(orthofilename)" << std::endl;return;}
+		std::cerr << "\n\n\t\t--- only now killing fftw plans at the end of the whole thing --- \n\n" << std::flush;
+		std::cerr << "detaching the fftwplans\n" << std::flush;
+		for (size_t i =0; i<m_aq.size();++i){
+			m_aq[i].detachplans();
 		}
-
-		time(&stoptime);
-		elapsed = difftime(stoptime,starttime);
-		std::cout << elapsed << " seconds." << std::endl;
-		starttime = stoptime;
-		std::cout << "skipping/printing out the integration results ...\t" << std::flush;
-		/*
-		if (!printIntegs()){
-			std::cerr << "Failed to printIntegs()" << std::endl;
-			return;
-		}
-		*/
-		time(&stoptime);
-		elapsed = difftime(stoptime,starttime);
-		std::cout << elapsed << " seconds" << std::endl;
 
 		return;
 	}
@@ -1013,8 +1030,8 @@ namespace CookieBox_pkg {
 		// index order is [0=TimeTool][1=ebeam][2=gasdet][3=chan][4=integwin]
 		// enum DimDefs {ttind,ebind,gdind,chanind,tofind};
 
-		std::vector<unsigned> lowlims = (configList("aq_integlims_low"));
-		std::vector<unsigned> highlims = (configList("aq_integlims_high"));
+		std::vector<unsigned> lowlims =  ( configList("aq_integlims_low")) ;
+		std::vector<unsigned> highlims = ( configList("aq_integlims_high")) ;
 		assert(lowlims.size()==highlims.size());
 
 
@@ -1079,7 +1096,7 @@ namespace CookieBox_pkg {
 
 
 		m_kwin.resize(2);
-		m_kwin = configList("patch_ke_win");
+		m_kwin = (configList("patch_ke_win"));
 
 		m_avg_legendres_nsums.resize(boost::extents
 				[m_data_5d.shape()[ebind]] // [1] ebeam bins
@@ -1782,11 +1799,11 @@ namespace CookieBox_pkg {
 				[m_data_5d.shape()[3]]  // channels
 				[m_data_5d.shape()[4]]	// samples
 				);
-		for(long long * it = m_avgSpectra.origin(); it < m_avgSpectra.origin() + m_avgSpectra.num_elements() ; ++it)
+		for(auto * it = m_avgSpectra.origin(); it < m_avgSpectra.origin() + m_avgSpectra.num_elements() ; ++it)
 		{
 			*it = 0;
 		}
-		for(long long * it = m_avgSpectra_shots.origin(); it < m_avgSpectra_shots.origin() + m_avgSpectra_shots.num_elements() ; ++it)
+		for(auto * it = m_avgSpectra_shots.origin(); it < m_avgSpectra_shots.origin() + m_avgSpectra_shots.num_elements() ; ++it)
 		{
 			*it = 0;
 		}
