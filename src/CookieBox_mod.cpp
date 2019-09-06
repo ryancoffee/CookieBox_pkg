@@ -393,7 +393,7 @@ namespace CookieBox_pkg {
 								[m_eb.bins(Ebeam::energy)]
 								[m_gd.bins(Gdet::average)]
 								[totalchannels]);
-						for(uint32_t * it = m_shots_4d.origin(); it < m_shots_4d.origin() + m_shots_4d.num_elements() ; ++it)
+						for(long * it = m_shots_4d.origin(); it < m_shots_4d.origin() + m_shots_4d.num_elements() ; ++it)
 							*it = 0;
 					}
 
@@ -408,7 +408,7 @@ namespace CookieBox_pkg {
 								[m_gd.bins(Gdet::average)]
 								[totalchannels]
 								[samples]);
-						for(uint32_t * it = m_data_5d.origin(); it < m_data_5d.origin() + m_data_5d.num_elements() ; ++it)
+						for(long * it = m_data_5d.origin(); it < m_data_5d.origin() + m_data_5d.num_elements() ; ++it)
 							*it = 0;
 					}
 				}
@@ -897,20 +897,20 @@ namespace CookieBox_pkg {
 		
 		if (m_rank == m_root_rank){
 			if (m_data_5d.num_elements() > 0  && m_shots_4d.num_elements() > 0 ) {
-				MPI::COMM_WORLD.Reduce(MPI::IN_PLACE,m_data_5d.origin(),m_data_5d.num_elements(),MPI::LONG_LONG,MPI::SUM,m_root_rank); 
-				MPI::COMM_WORLD.Reduce(MPI::IN_PLACE,m_shots_4d.origin(),m_shots_4d.num_elements(),MPI::LONG_LONG,MPI::SUM,m_root_rank); 
+				MPI::COMM_WORLD.Reduce(MPI::IN_PLACE,m_data_5d.origin(),m_data_5d.num_elements(),MPI::LONG,MPI::SUM,m_root_rank); 
+				MPI::COMM_WORLD.Reduce(MPI::IN_PLACE,m_shots_4d.origin(),m_shots_4d.num_elements(),MPI::LONG,MPI::SUM,m_root_rank); 
 			}
 			std::cout << "passing further into endRun() in rank " << m_rank ;
 			std::cout << " with failed events/total = " << m_failed_event.at(m_rank) << " / " << m_count_event.at(m_rank) << std::endl;
 		} else {
 			if (m_data_5d.num_elements() > 0  && m_shots_4d.num_elements() > 0 ) {
-				MPI::COMM_WORLD.Reduce(m_data_5d.origin(),m_data_5d.origin(),m_data_5d.num_elements(),MPI::LONG_LONG,MPI::SUM,m_root_rank); 
-				MPI::COMM_WORLD.Reduce(m_shots_4d.origin(),m_shots_4d.origin(),m_shots_4d.num_elements(),MPI::LONG_LONG,MPI::SUM,m_root_rank); 
+				MPI::COMM_WORLD.Reduce(m_data_5d.origin(),m_data_5d.origin(),m_data_5d.num_elements(),MPI::LONG,MPI::SUM,m_root_rank); 
+				MPI::COMM_WORLD.Reduce(m_shots_4d.origin(),m_shots_4d.origin(),m_shots_4d.num_elements(),MPI::LONG,MPI::SUM,m_root_rank); 
 			}
 			std::cout << "returning from endRun() in rank " << m_rank ;
 			std::cout << " with failed events/total = " << m_failed_event.at(m_rank) << " / " << m_count_event.at(m_rank) << std::endl;
 		}
-		std::cout << "finished collecting MPI" << std::endl;
+		std::cout << "finished collecting MPI in rank " << m_rank << std::endl;
 
 		if (m_rank == m_root_rank)
 		{
@@ -1003,8 +1003,14 @@ namespace CookieBox_pkg {
 		}
 		std::cerr << "\n\n\t\t--- only now killing fftw plans at the end of the whole thing --- \n\n" << std::flush;
 		std::cerr << "detaching the fftwplans\n" << std::flush;
-		for (size_t i =0; i<m_aq.size();++i){
-			m_aq[i].detachplans();
+
+		std::vector<bool> use_logic = (configList("use_logic")) ;
+		if (* (use_logic.begin() + use_aq))
+		{
+			for (size_t i =0; i<m_aq.size();++i){
+				std::cerr << "detaching plans for m_aq[ " << i << " ] in rank "  << m_rank << "\n" << std::flush;
+				m_aq[i].detachplans();
+			}
 		}
 
 		return;
@@ -1799,11 +1805,11 @@ namespace CookieBox_pkg {
 				[m_data_5d.shape()[3]]  // channels
 				[m_data_5d.shape()[4]]	// samples
 				);
-		for(auto * it = m_avgSpectra.origin(); it < m_avgSpectra.origin() + m_avgSpectra.num_elements() ; ++it)
+		for(long * it = m_avgSpectra.origin(); it < m_avgSpectra.origin() + m_avgSpectra.num_elements() ; ++it)
 		{
 			*it = 0;
 		}
-		for(auto * it = m_avgSpectra_shots.origin(); it < m_avgSpectra_shots.origin() + m_avgSpectra_shots.num_elements() ; ++it)
+		for(long * it = m_avgSpectra_shots.origin(); it < m_avgSpectra_shots.origin() + m_avgSpectra_shots.num_elements() ; ++it)
 		{
 			*it = 0;
 		}

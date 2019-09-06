@@ -29,9 +29,9 @@ class Acqiris
 	typedef ndarray<const short int,2> wf_t;
 	typedef ndarray<const double,2> wt_t;
 	typedef boost::multi_array_types::index_range ind_range;
-	typedef boost::multi_array<uint32_t,4>::array_view<1>::type a4d_ll_1dview_t;
-	typedef boost::multi_array<uint32_t,4>::array_view<2>::type a4d_ll_2dview_t;
-	typedef boost::multi_array<uint32_t,4>::array_view<2>::type a5d_ll_2dview_t;
+	typedef boost::multi_array<long,4>::array_view<1>::type a4d_ll_1dview_t;
+	typedef boost::multi_array<long,4>::array_view<2>::type a4d_ll_2dview_t;
+	typedef boost::multi_array<long,4>::array_view<2>::type a5d_ll_2dview_t;
 
 	public:
 		enum LimsInd {start,stop,bins};

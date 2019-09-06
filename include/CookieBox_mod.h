@@ -124,16 +124,16 @@ class CookieBox_mod
 	typedef ndarray<const short,2> shortwf_t;
 
 	typedef boost::multi_array<unsigned,2> a2d_u_t;
-	typedef boost::multi_array<uint32_t,2> a2d_ll_t;
+	typedef boost::multi_array<long,2> a2d_ll_t;
 	typedef boost::multi_array<long double,2> a2d_ld_t;
 	typedef boost::multi_array<double,2> a2d_d_t;
-	typedef boost::multi_array<uint32_t,3> a3d_ll_t;
+	typedef boost::multi_array<long,3> a3d_ll_t;
 	typedef boost::multi_array<long double,3> a3d_ld_t;
 	typedef boost::multi_array<double,3> a3d_d_t;
-	typedef boost::multi_array<uint32_t,4> a4d_ll_t;
+	typedef boost::multi_array<long,4> a4d_ll_t;
 	typedef boost::multi_array<long double,4> a4d_ld_t;
 	typedef boost::multi_array<double,4> a4d_d_t;
-	typedef boost::multi_array<uint32_t,5> a5d_ll_t;
+	typedef boost::multi_array<long,5> a5d_ll_t;
 	typedef boost::multi_array<long double,5> a5d_ld_t;
 	typedef boost::multi_array<double,5> a5d_d_t;
 
