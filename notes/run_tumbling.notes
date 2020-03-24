@@ -1,13 +1,17 @@
-In either case, remember to sit_setup (or the equivalent to get all the libraries needed.
+### depricated 
+# In either case, remember to sit_setup (or the equivalent to get all the libraries needed.
+#
+# mpirun -n 2 python ./mpi_driver.py -n 2000 -c psana_tumbling.cfg 'exp=amoi0314:run=172'
+# this is to debug from psana command line.
+#
+#
+#
+# bsub -q psanaq -o forKareem.172.Nranks.log -a mympi -n 4 python ./mpi_driver.py -n 0 -c psana_tumbling.cfg 'exp=amoi0314:run=172'
+# This is to submit to the batch queue after debugging.
+# Also, there is a diminishing return if you scatter across more than 8 nodes or so.  Maybe 12 is the magic number?
+#
+#
+#### depricated #### bsub -a mympi -n 4 -q psanaq python ./mpi_driver.py -n 0 -c psana_tumbling.cfg exp=amoi0314:run=167
 
-mpirun -n 2 python ./mpi_driver.py -n 2000 -c psana_tumbling.cfg 'exp=amoi0314:run=172'
-this is to debug from psana command line.
-
-
-
-bsub -q psanaq -o forKareem.172.Nranks.log -a mympi -n 4 python ./mpi_driver.py -n 0 -c psana_tumbling.cfg 'exp=amoi0314:run=172'
-This is to submit to the batch queue after debugging.
-Also, there is a diminishing return if you scatter across more than 8 nodes or so.  Maybe 12 is the magic number?
-
-
-bsub -a mympi -n 4 -q psanaq python ./mpi_driver.py -n 0 -c psana_tumbling.cfg exp=amoi0314:run=167
+source CookieBox_pkg/config/runpre.bash
+bsub -n 4 -q psanaq mpirun python ./mpi_driver.py -n 0 -c psana_tumbling.cfg exp=amoi0314:run=172
