@@ -13,5 +13,6 @@
 #
 #### depricated #### bsub -a mympi -n 4 -q psanaq python ./mpi_driver.py -n 0 -c psana_tumbling.cfg exp=amoi0314:run=167
 
+ssh psbuild-rhel7
 source CookieBox_pkg/config/runpre.bash
-bsub -n 4 -q psanaq mpirun python ./mpi_driver.py -n 0 -c psana_tumbling.cfg exp=amoi0314:run=172
+bsub -n 12 -q psanaq mpirun python ./mpi_driver.py -n 0 -c psana_tumbling.cfg exp=amoi0314:run=172
