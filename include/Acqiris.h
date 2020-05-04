@@ -79,7 +79,8 @@ class Acqiris
 		void evtput(Event& evt, Env& env);
 		void evtput(Event& evt, Env& env, const unsigned chan);
 
-		bool fancyfill(Event& evt, Env& env, a5d_ll_2dview_t & slice, a4d_ll_1dview_t & shotslice);
+		bool ydy_fill(Event& evt, Env& env, a5d_ll_2dview_t & slice, a4d_ll_1dview_t & shotslice);
+		bool yddy_fill(Event& evt, Env& env, a5d_ll_2dview_t & slice, a4d_ll_1dview_t & shotslice);
 		bool fill(Event& evt, Env& env, a5d_ll_2dview_t & slice, a4d_ll_1dview_t & shotslice);
 		bool fill(Event& evt, Env& env, a4d_ll_2dview_t & slice);
 		bool fill(Event& evt, Env& env);
@@ -96,8 +97,10 @@ class Acqiris
 	private:
 		double * wf_y; // = (double *) fftw_malloc(sizeof(double) * sz);
 		double * wf_ddy; // = (double *) fftw_malloc(sizeof(double) * sz);
+		double * wf_dy; // = (double *) fftw_malloc(sizeof(double) * sz);
 		double * wf_Y_hc; // = (double *) fftw_malloc(sizeof(double) * sz);
 		double * wf_DDY_hc; // = (double *) fftw_malloc(sizeof(double) * sz);
+		double * wf_DY_hc; // = (double *) fftw_malloc(sizeof(double) * sz);
 		fftw_plan* plan_r2hc_Ptr;
 		fftw_plan* plan_hc2r_Ptr;
 

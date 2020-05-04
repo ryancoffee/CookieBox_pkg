@@ -611,7 +611,7 @@ namespace CookieBox_pkg {
 						];
 
 				// Ideally, make a class of accumulators (or signal accumulators) to pass all these slices and things //
-				//if ( m_aq[i].fancyfill(evt,env,slice,shotslice)) { 
+				//if ( m_aq[i].yddy_fill(evt,env,slice,shotslice)) { 
 				if ( m_aq[i].fill(evt,env,slice,shotslice)) { 
 					startchanind += m_aq[i].nchannels();
 				} else {

@@ -33,8 +33,10 @@ namespace CookieBox_pkg
 	, m_nchannels(1)
 	, wf_y(NULL)
 	, wf_ddy(NULL)
+	, wf_dy(NULL)
 	, wf_Y_hc(NULL)
 	, wf_DDY_hc(NULL)
+	, wf_DY_hc(NULL)
 	, plan_r2hc_Ptr(NULL)
 	, plan_hc2r_Ptr(NULL)
 	{
@@ -48,8 +50,10 @@ namespace CookieBox_pkg
 			m_outfile.close();
 		if (wf_y != NULL){ fftw_free(wf_y); }
 		if (wf_ddy != NULL) { fftw_free(wf_ddy); }
+		if (wf_dy != NULL) { fftw_free(wf_dy); }
 		if (wf_Y_hc != NULL) { fftw_free(wf_Y_hc); }
 		if (wf_DDY_hc != NULL) { fftw_free(wf_DDY_hc); }
+		if (wf_DY_hc != NULL) { fftw_free(wf_DY_hc); }
 	}
 
 	Acqiris & Acqiris::operator= ( const Acqiris & rhs )
@@ -142,8 +146,10 @@ namespace CookieBox_pkg
 		size_t sz = m_lims.at(bins);
 		wf_y = (double *) fftw_malloc(sizeof(double) * sz);
 		wf_ddy = (double *) fftw_malloc(sizeof(double) * sz);
+		wf_dy = (double *) fftw_malloc(sizeof(double) * sz);
 		wf_Y_hc = (double *) fftw_malloc(sizeof(double) * sz);
 		wf_DDY_hc = (double *) fftw_malloc(sizeof(double) * sz);
+		wf_DY_hc = (double *) fftw_malloc(sizeof(double) * sz);
 		plan_r2hc_Ptr = NULL;
 		plan_hc2r_Ptr = NULL;
 		return true;
@@ -224,7 +230,77 @@ namespace CookieBox_pkg
 	//	Lets use the sparsity rather than fill the entire ND array	//
 	//	std::map gives a key::value pair	//
 
-	bool Acqiris::fancyfill(Event& evt, Env& env, a5d_ll_2dview_t & slice, a4d_ll_1dview_t & shotslice)
+	bool Acqiris::ydy_fill(Event& evt, Env& env, a5d_ll_2dview_t & slice, a4d_ll_1dview_t & shotslice)
+	{
+		// use this method to fill a slice of the multi_array, but incorporating the Y conv ddY filter, where we want the histogram.
+		m_srcPtr = evt.get(m_srcStr);
+		if (!m_srcPtr.get()){return false;}
+		if (m_getConfig){std::cout << getConfig(env);}
+
+		if (m_data.size() != m_nchannels)
+			m_data.resize(m_nchannels);
+		if (m_data.back().size() != m_lims.at(bins)){
+			for (unsigned c=0;c<m_data.size();++c)
+				m_data[c].resize(m_lims.at(bins),0);
+		}
+
+		for (unsigned chan=0;chan<m_nchannels;++chan){
+
+			wf_t wf = m_srcPtr->data(chan).waveforms(); // the 2D'ness of this is for the unused segments, not the channels.
+			
+
+			const int segment = 0; // [chris ogrady] always 0 for LCLS data taken so far (a feature of the acqiris we don't use)
+			long long basesum;
+			basesum = 0;
+			for (unsigned s = m_baselims.at(start); s < m_baselims.at(stop);++s){
+				// fill baseline //
+				basesum += wf[segment][s];
+			}
+
+			size_t sz = m_lims.at(bins);
+			for (unsigned s = 0; s < sz; ++s) {
+				long int val = (wf[segment][m_lims.at(start) + s] - basesum/m_baselims.at(bins));
+				if (m_invert)
+					val *= -1;
+				wf_y[s] = double(val);
+			}
+			// fftw makes un-normalized transforms, so we need to divid by root(n) for each transform (or n for each back and forth
+			fftw_execute_r2r(*plan_r2hc_Ptr, wf_y, wf_Y_hc );
+
+			unsigned bwd = sz/3;
+			wf_DY_hc[0] = 0.;
+			for( unsigned s=1;s<bwd;++s){
+				double lpf = (std::cos(double(s)/(double)bwd *  M_PI),int(2));
+				wf_Y_hc[s] *= lpf;
+				wf_Y_hc[sz-s] *= lpf;
+				wf_DY_hc[s] = -std::pow(double(s),int(2))/std::pow(double(bwd),int(2)) * wf_Y_hc[s];
+				wf_DY_hc[sz-s] = -std::pow(double(s),int(2))/std::pow(double(bwd),int(2)) * wf_Y_hc[sz-s];
+			}	
+
+			for( unsigned s=bwd;s<sz/2;++s){
+				wf_Y_hc[s] = wf_Y_hc[sz-s] = wf_DY_hc[s] = wf_DY_hc[sz-s] = 0.;
+			}
+
+			fftw_execute_r2r(*plan_hc2r_Ptr, wf_Y_hc, wf_y);
+			fftw_execute_r2r(*plan_hc2r_Ptr, wf_DY_hc, wf_dy );
+
+			for ( unsigned s=0; s<sz; ++s){
+				double res = 0.;
+				m_data.at(chan).at(s) = int16_t(res);
+				if ( (wf_y[s] > 0.) && (wf_dy[s] < 0.)){
+					res = wf_y[s] * -1. * wf_dy[s] * std::pow(sz,int(-2)) / m_thresh[chan]; // this normalizes	
+					res = log2(res); // using the to supress the pileup
+					if (res >= 1.){					
+						slice[chan][s] += int16_t(res);
+						m_data.at(chan).at(s) = int16_t(res);
+					}
+				}
+			}
+			++shotslice[chan]; 
+		}
+		return true;
+	}
+	bool Acqiris::yddy_fill(Event& evt, Env& env, a5d_ll_2dview_t & slice, a4d_ll_1dview_t & shotslice)
 	{
 		// use this method to fill a slice of the multi_array, but incorporating the Y conv ddY filter, where we want the histogram.
 		m_srcPtr = evt.get(m_srcStr);
