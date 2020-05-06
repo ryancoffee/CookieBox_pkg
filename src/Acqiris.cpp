@@ -337,7 +337,7 @@ namespace CookieBox_pkg
 			// fftw makes un-normalized transforms, so we need to divid by root(n) for each transform (or n for each back and forth
 			fftw_execute_r2r(*plan_r2hc_Ptr, wf_y, wf_Y_hc );
 
-			unsigned bwd = sz/3;
+			unsigned bwd = sz/8; // HERE HERE HERE HERE manually playing with the low pass filter bandwidth
 			wf_DDY_hc[0] = 0.;
 			for( unsigned s=1;s<bwd;++s){
 				double lpf = (std::cos(double(s)/(double)bwd *  M_PI),int(2));
