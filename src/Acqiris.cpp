@@ -571,6 +571,37 @@ namespace CookieBox_pkg
 		if (m_outfile.is_open())
 			m_outfile.close();
 	}
+	bool Acqiris::fillFancyFiltered(std::vector< std::vector< int16_t >> & filtered_data)
+	{
+		// HERE HERE HERE HERE manually playing with the low pass filter bandwidth
+		if (m_data.size() != m_nchannels){
+			std::cerr << "Trying to filter an empty m_data\n" << std::flush;
+			return false;
+		}
+		for (size_t c=0;c<m_data.size();++c){
+			size_t sz = m_data[c].size();
+			size_t bwd = sz/8; 
+			for (size_t s=0;s<sz;++s){
+				wf_y[s] = double(m_data[c][s]);
+			}
+			fftw_execute_r2r(*plan_r2hc_Ptr, wf_y, wf_Y_hc );
+			// fftw makes un-normalized transforms, so we need to divid by root(n) for each transform (or n for each back and forth
+			scaleVec(wf_Y_hc,1.0/std::sqrt(double(sz)));
+
+			for( size_t s=1;s<bwd;++s){
+				double lpf = 0.5*(1.0 + std::cos(double(s)/(double)bwd *  M_PI));
+				wf_Y_hc[s] *= lpf;
+				wf_Y_hc[sz-s] *= lpf;
+			}	
+			for( unsigned s=bwd;s<sz/2;++s){
+				wf_Y_hc[s] = wf_Y_hc[sz-s] = wf_DDY_hc[s] = wf_DDY_hc[sz-s] = 0.;
+			}
+			// OK HERE HERE HERE HERE I have the filtered fourier result, just need to back transform.
+		}
+
+		
+		return true;
+	}
 	bool Acqiris::print_out(const unsigned eventnum)
 	{
 		std::string eventfilename(m_filename);
@@ -578,17 +609,29 @@ namespace CookieBox_pkg
 		if (m_outfile.is_open())
 			m_outfile.close();
 		m_outfile.open(eventfilename.c_str(),std::ios::out);
+		std::vector< std::vector< int16_t >> filtered_data;
+		bool filteredexists = fillFancyFiltered(filtered_data);
+		std::ofstream filtered_outfile;
+		if (filteredexists){
+			filteredeventfilename += ".filtered.event_" + boost::lexical_cast<std::string>(eventnum);
+			filtered_outfile.open(filteredeventfilename.c_str(),std::ios::out);
+		}
 		if (!m_outfile.is_open())
 			return false;
-		if (m_data.size() == m_nchannels) {
-			for (unsigned s=0;s<m_data.at(0).size();++s){
-				for (unsigned c=0;c<m_data.size();++c){
-					m_outfile << m_data.at(c).at(s) << "\t";
-				}
-				m_outfile << "\n";
+		if (filteredexists && !m_filtered_outfile.is_open())
+			return false;
+		if (m_data.size() != m_nchannels) 
+			return false;
+		for (unsigned s=0;s<m_data.at(0).size();++s){
+			for (unsigned c=0;c<m_data.size();++c){
+				m_outfile << m_data.at(c).at(s) << "\t";
+				if(filteredexists) m_filtered_outfile << m_filtered_data.at(c).at(s) << "\t";
 			}
+			m_outfile << "\n";
+			if (filteredexists) m_filtered_outfile << "\n";
 		}
 		m_outfile.close();
+		if (filteredexists && m_filtered_outfile.is_open()) m_filtered_outfile.close();
 		return true;
 	}
 	bool Acqiris::print_out(void){

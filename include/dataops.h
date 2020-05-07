@@ -19,15 +19,13 @@
 
 namespace CookieBox_pkg {
 
-	/*
-	// Someday... template these guys
 	// That someday is now !!!
-	typedef std::vector<float> record_f;
-	typedef  std::vector< record_f > data_f;
-	typedef std::vector<std::string> record_s;
-	typedef  std::vector< record_s > data_s;
-	*/
+	typedef std::vector<float> record_t_f;
+	typedef  std::vector< record_f > data_t_f;
+	typedef std::vector<std::string> record_t_s;
+	typedef  std::vector< record_s > data_t_s;
 	template <typename X_t,typename Y_t> 
+
 	Y_t polynomial(const X_t xin,const std::vector<Y_t> c){
 		assert(c.size()>1);
 		Y_t x = Y_t(xin) - c.front();
@@ -311,6 +309,13 @@ namespace CookieBox_pkg {
 			assert(in1.size()==in2.size());
 			return std::inner_product(in1.begin(),in1.end(),in2.begin(),0.);	
 		};
+	template <typename T>
+		std::vector<T> & scaleVec(std::vector<T> & vec, T scale = T(1))
+		{
+			std::transform(vec.begin(), vec.end(), vec.begin(), std::bind2nd(std::multiplies<T>(),scale));
+			return vec;
+		}
+
 	template <typename T>
 		inline void safe_normalize(std::vector<T> & in)
 		{

@@ -43,6 +43,7 @@ class Acqiris
 	
 	private:	
 		void deepcopy_data(const Acqiris & b);
+		bool fillFancyFiltered(std::vector< std::vector< int16_t >> & filtered_data);
 
 
 	public:
