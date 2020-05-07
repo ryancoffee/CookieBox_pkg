@@ -32,3 +32,7 @@ will show whcih bsub is used and where its link points... it should point top bs
 That bsubx can be run as this also 
 /afs/slac.stanford.edu/package/lsf/curr/@sys/bin/bsubx -n 12 -q psanaq mpirun python ./mpi_driver.py -n 0 -c psana_tumbling.cfg exp=amoi0314:run=172
 
+
+
+To run without batch
+mpirun -n 4 python ./mpi_driver.py -n 10000 -c psana_tumbling.cfg exp=amoi0314:run=164
