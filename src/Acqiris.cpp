@@ -293,10 +293,12 @@ namespace CookieBox_pkg
 			fftw_execute_r2r(*plan_hc2r_Ptr, wf_Y_hc, wf_y);
 			scaleVec(sz,wf_y,1.0/std::sqrt(double(sz)));
 			for (size_t s=0;s<sz;++s){
+				slice[chan][s] += (int16_t)std::max(wf_y[s]/m_thresh[chan],0.);
 				m_data[chan][s] = (uint16_t)std::max(wf_y[s]/m_thresh[chan],0.);
 			}
 
 			
+			++shotslice[chan]; 
 		}
 		return true;
 
