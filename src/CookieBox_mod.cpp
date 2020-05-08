@@ -198,6 +198,8 @@ namespace CookieBox_pkg {
 			std::vector<std::string> aq_source_list = ( (configList("aq_source_list")) );
 			std::vector<unsigned> aq_baseline_lims = ( (configList("aq_baseline_lims")) );
 			std::vector<unsigned> aq_lims = ( (configList("aq_lims")) );
+			std::vector<size_t> aq_bwd_lims = ( (configList("aq_bwd_lim")) );
+			std::vector<float> aq_bwd_nr = ( (configList("aq_bwd_noiseratio")) );
 			std::vector<double> aq_thresh = ( (configList("aq_thresh_list")) );
 			m_aq.clear();
 			//Acqiris master(aq_lims,aq_baseline_lims);
@@ -213,6 +215,8 @@ namespace CookieBox_pkg {
 				m_aq.back().print(*print_itr);
 				m_aq.back().invert(config("aq_invert",false));
 				m_aq.back().setthresh(aq_thresh);
+				m_aq.back().setbwdlim(aq_bwd_lims);
+				m_aq.back().setbwdnr(aq_bwd_nr);
 				totalchannels += m_aq.back().nchannels();
 				unsigned s = m_aq.back().nsamples();
 				if ( samples < s)
@@ -612,7 +616,8 @@ namespace CookieBox_pkg {
 
 				// Ideally, make a class of accumulators (or signal accumulators) to pass all these slices and things //
 				//if ( m_aq[i].yddy_fill(evt,env,slice,shotslice)) { 
-				if ( m_aq[i].fill(evt,env,slice,shotslice)) { 
+				if ( m_aq[i].filtered_fill(evt,env,slice,shotslice)) { 
+				//if ( m_aq[i].fill(evt,env,slice,shotslice)) { 
 					startchanind += m_aq[i].nchannels();
 				} else {
 					std::cerr << "Failed the Acqiris, skipping the print and rest of event " 

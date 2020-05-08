@@ -54,6 +54,8 @@ class Acqiris
 		void pointplans(fftw_plan * const forward,fftw_plan * const backward);
 		void detachplans();
 		void setthresh(std::vector<double> in);
+		void setbwdlim(std::vector<size_t> in);
+		void setbwdnr(std::vector<float> in);
 
 		inline bool use(bool in){m_use = in;return m_use;}
 		inline bool use(void){return m_use;}
@@ -82,6 +84,7 @@ class Acqiris
 
 		bool ydy_fill(Event& evt, Env& env, a5d_ll_2dview_t & slice, a4d_ll_1dview_t & shotslice);
 		bool yddy_fill(Event& evt, Env& env, a5d_ll_2dview_t & slice, a4d_ll_1dview_t & shotslice);
+		bool filtered_fill(Event& evt, Env& env, a5d_ll_2dview_t & slice, a4d_ll_1dview_t & shotslice);
 		bool fill(Event& evt, Env& env, a5d_ll_2dview_t & slice, a4d_ll_1dview_t & shotslice);
 		bool fill(Event& evt, Env& env, a4d_ll_2dview_t & slice);
 		bool fill(Event& evt, Env& env);
@@ -116,8 +119,11 @@ class Acqiris
 		Source m_srcStr;
 		Pds::Src m_src;
 
-		std::vector< std::vector<int16_t> > m_data;
+		//std::vector< std::vector<int16_t> > m_data;
+		std::vector< std::vector<uint16_t> > m_data;
 		std::vector< double > m_thresh;
+		std::vector< size_t > m_bwd_lim;
+		std::vector< float > m_bwd_nr;
 
 		unsigned m_nchannels;
 		unsigned m_max_samples;

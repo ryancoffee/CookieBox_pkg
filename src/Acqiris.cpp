@@ -140,6 +140,16 @@ namespace CookieBox_pkg
 		m_thresh.resize(in.size(),1e5);
 		std::copy(in.begin(),in.end(),m_thresh.begin());
 	}
+	void Acqiris::setbwdlim(std::vector<size_t> in)
+	{
+		m_bwd_lim.resize(in.size(),200);
+		std::copy(in.begin(),in.end(),m_bwd_lim.begin());
+	}
+	void Acqiris::setbwdnr(std::vector<float> in)
+	{
+		m_bwd_nr.resize(in.size(),0.1);
+		std::copy(in.begin(),in.end(),m_bwd_nr.begin());
+	}
 
 	bool Acqiris::init()
 	{
@@ -230,6 +240,67 @@ namespace CookieBox_pkg
 	//	Lets use the sparsity rather than fill the entire ND array	//
 	//	std::map gives a key::value pair	//
 
+	bool Acqiris::filtered_fill(Event& evt, Env& env, a5d_ll_2dview_t & slice, a4d_ll_1dview_t & shotslice)
+	{
+		// use this method to fill a slice of the multi_array, but incorporating the Y conv ddY filter, where we want the histogram.
+		m_srcPtr = evt.get(m_srcStr);
+		if (!m_srcPtr.get()){return false;}
+		if (m_getConfig){std::cout << getConfig(env);}
+
+		if (m_data.size() != m_nchannels)
+			m_data.resize(m_nchannels);
+		if (m_data.back().size() != m_lims.at(bins)){
+			for (unsigned c=0;c<m_data.size();++c)
+				m_data[c].resize(m_lims.at(bins),0);
+		}
+
+		for (unsigned chan=0;chan<m_nchannels;++chan){
+
+			wf_t wf = m_srcPtr->data(chan).waveforms(); // the 2D'ness of this is for the unused segments, not the channels.
+			
+
+			const int segment = 0; // [chris ogrady] always 0 for LCLS data taken so far (a feature of the acqiris we don't use)
+			long long basesum;
+			basesum = 0;
+			for (unsigned s = m_baselims.at(start); s < m_baselims.at(stop);++s){
+				// fill baseline //
+				basesum += wf[segment][s];
+			}
+
+			size_t sz = m_lims.at(bins);
+			for (unsigned s = 0; s < sz; ++s) {
+				long int val = (wf[segment][m_lims.at(start) + s] - basesum/m_baselims.at(bins));
+				if (m_invert)
+					val *= -1;
+				wf_y[s] = double(val);
+			}
+			// fftw makes un-normalized transforms, so we need to divid by root(n) for each transform (or n for each back and forth
+			fftw_execute_r2r(*plan_r2hc_Ptr, wf_y, wf_Y_hc );
+			// fftw makes un-normalized transforms, so we need to divid by root(n) for each transform (or n for each back and forth
+			scaleVec(sz,wf_Y_hc,1.0/std::sqrt(double(sz)));
+			size_t bwd = m_bwd_lim[chan];
+			float nr = m_bwd_nr[chan];
+			for( size_t s=1;s<bwd;++s){
+				double lpf = 0.5*(1.0 + std::cos(double(s)/(double)bwd *  M_PI));
+				double f = lpf/(nr+lpf); // poor man's weiner filter
+				wf_Y_hc[s] *= f;
+				wf_Y_hc[sz-s] *= f;
+			}	
+			for( unsigned s=bwd;s<sz/2;++s){
+				wf_Y_hc[s] = wf_Y_hc[sz-s] = wf_DDY_hc[s] = wf_DDY_hc[sz-s] = 0.;
+			}
+			wf_Y_hc[sz/2] = 0.;
+			fftw_execute_r2r(*plan_hc2r_Ptr, wf_Y_hc, wf_y);
+			scaleVec(sz,wf_y,1.0/std::sqrt(double(sz)));
+			for (size_t s=0;s<sz;++s){
+				m_data[chan][s] = (uint16_t)std::max(wf_y[s]/m_thresh[chan],0.);
+			}
+
+			
+		}
+		return true;
+
+	}
 	bool Acqiris::ydy_fill(Event& evt, Env& env, a5d_ll_2dview_t & slice, a4d_ll_1dview_t & shotslice)
 	{
 		// use this method to fill a slice of the multi_array, but incorporating the Y conv ddY filter, where we want the histogram.
@@ -291,8 +362,8 @@ namespace CookieBox_pkg
 					res = wf_y[s] * -1. * wf_dy[s] * std::pow(sz,int(-2)) / m_thresh[chan]; // this normalizes	
 					res = log2(res); // using the to supress the pileup
 					if (res >= 1.){					
-						slice[chan][s] += int16_t(res);
-						m_data.at(chan).at(s) = int16_t(res);
+						slice[chan][s] += (int16_t)std::max((int)res,0);
+						m_data.at(chan).at(s) = (int16_t)std::max((int)res,0);
 					}
 				}
 			}
@@ -360,8 +431,8 @@ namespace CookieBox_pkg
 					res = wf_y[s] * -1. * wf_ddy[s] * std::pow(sz,int(-2)) / m_thresh[chan]; // this normalizes	
 					res = log2(res); // using the to supress the pileup
 					if (res >= 1.){					
-						slice[chan][s] += int16_t(res);
-						m_data.at(chan).at(s) = int16_t(res);
+						slice[chan][s] += (uint16_t)std::max((int)res,0);
+						m_data.at(chan).at(s) = (uint16_t)std::max((int)res,0);
 					}
 				}
 			}
@@ -400,8 +471,9 @@ namespace CookieBox_pkg
 				int16_t val = (wf[segment][m_lims.at(start) + s] - basesum/m_baselims.at(bins));
 				if (m_invert)
 					val *= -1;
-				slice[chan][s] += val;
-				m_data.at(chan).at(s) = int16_t(val);
+				val /= m_thresh[chan]; // here I'm using m_thresh[chan] to scale down so integer values are low... really this should fit in 8 bits
+				slice[chan][s] += (uint16_t)std::max(val,(int16_t)0);
+				m_data.at(chan).at(s) = (uint16_t)std::max(val,(int16_t)0);
 			}
 			++shotslice[chan]; 
 		}
@@ -438,8 +510,9 @@ namespace CookieBox_pkg
 				int16_t val = (wf[segment][m_lims.at(start) + s] - basesum/m_baselims.at(bins));
 				if (m_invert)
 					val *= -1;
-				slice[chan][s] += val;
-				m_data.at(chan).at(s) = val;
+				val /= m_thresh[chan]; // here I'm using m_thresh[chan] to scale down so integer values are low... really this should fit in 8 bits
+				slice[chan][s] += (uint16_t)std::max(val,(int16_t)0);
+				m_data.at(chan).at(s) = (uint16_t)std::max(val,(int16_t)0);
 			}
 		}
 		return true;
@@ -493,7 +566,8 @@ namespace CookieBox_pkg
 				}
 				if (m_invert)
 					val *= -1;
-				m_data.at(chan).at(s) = val;
+				val /= m_thresh[chan]; // here I'm using m_thresh[chan] to scale down so integer values are low... really this should fit in 8 bits
+				m_data.at(chan).at(s) = (uint16_t)std::max(val,(int16_t)0);
 			}
 		}
 		return true;
@@ -579,7 +653,6 @@ namespace CookieBox_pkg
 			return false;
 		}
 		size_t sz = m_data[0].size();
-		size_t bwd = sz/8; 
 		filtered_data.resize(m_data.size());
 		for (size_t c=0;c<m_data.size();++c){
 			filtered_data[c].resize(sz);
@@ -589,15 +662,18 @@ namespace CookieBox_pkg
 			fftw_execute_r2r(*plan_r2hc_Ptr, wf_y, wf_Y_hc );
 			// fftw makes un-normalized transforms, so we need to divid by root(n) for each transform (or n for each back and forth
 			scaleVec(sz,wf_Y_hc,1.0/std::sqrt(double(sz)));
-
+			size_t bwd = m_bwd_lim[c];
+			float nr = m_bwd_nr[c];
 			for( size_t s=1;s<bwd;++s){
 				double lpf = 0.5*(1.0 + std::cos(double(s)/(double)bwd *  M_PI));
-				wf_Y_hc[s] *= lpf;
-				wf_Y_hc[sz-s] *= lpf;
+				double f = lpf/(nr+lpf); // poor man's weiner filter
+				wf_Y_hc[s] *= f;
+				wf_Y_hc[sz-s] *= f;
 			}	
 			for( unsigned s=bwd;s<sz/2;++s){
 				wf_Y_hc[s] = wf_Y_hc[sz-s] = wf_DDY_hc[s] = wf_DDY_hc[sz-s] = 0.;
 			}
+			wf_Y_hc[sz/2] = 0.;
 			fftw_execute_r2r(*plan_hc2r_Ptr, wf_Y_hc, wf_y);
 			scaleVec(sz,wf_y,1.0/std::sqrt(double(sz)));
 			for (size_t s=0;s<sz;++s){
