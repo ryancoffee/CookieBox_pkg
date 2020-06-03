@@ -9,6 +9,7 @@
 #include <memory>
 #include <fftw/fftw3.h>
 #include <cmath>
+#include <valarray>
 //#include "CookieBox_pkg/Constants.hpp"
 
 using namespace CookieBox_pkg;
@@ -37,6 +38,8 @@ namespace CookieBox_pkg
 	, wf_Y_hc(NULL)
 	, wf_DDY_hc(NULL)
 	, wf_DY_hc(NULL)
+	, wf_deconv(NULL)
+	, wf_DECONV(NULL)
 	, plan_r2hc_Ptr(NULL)
 	, plan_hc2r_Ptr(NULL)
 	{
@@ -54,6 +57,8 @@ namespace CookieBox_pkg
 		if (wf_Y_hc != NULL) { fftw_free(wf_Y_hc); }
 		if (wf_DDY_hc != NULL) { fftw_free(wf_DDY_hc); }
 		if (wf_DY_hc != NULL) { fftw_free(wf_DY_hc); }
+		if (wf_DECONV != NULL) { fftw_free(wf_DECONV); }
+		if (wf_deconv != NULL) { fftw_free(wf_deconv); }
 	}
 
 	Acqiris & Acqiris::operator= ( const Acqiris & rhs )
@@ -135,21 +140,6 @@ namespace CookieBox_pkg
 
 		return init();
 	}
-	void Acqiris::setthresh(std::vector<double> in)
-	{
-		m_thresh.resize(in.size(),1e5);
-		std::copy(in.begin(),in.end(),m_thresh.begin());
-	}
-	void Acqiris::setbwdlim(std::vector<size_t> in)
-	{
-		m_bwd_lim.resize(in.size(),200);
-		std::copy(in.begin(),in.end(),m_bwd_lim.begin());
-	}
-	void Acqiris::setbwdnr(std::vector<float> in)
-	{
-		m_bwd_nr.resize(in.size(),0.1);
-		std::copy(in.begin(),in.end(),m_bwd_nr.begin());
-	}
 
 	bool Acqiris::init()
 	{
@@ -158,8 +148,14 @@ namespace CookieBox_pkg
 		wf_ddy = (double *) fftw_malloc(sizeof(double) * sz);
 		wf_dy = (double *) fftw_malloc(sizeof(double) * sz);
 		wf_Y_hc = (double *) fftw_malloc(sizeof(double) * sz);
+		wf_Y_rho = std::valarray<double>( fftw_malloc(sizeof(double) * sz), sz);
+		wf_Y_phi = std::valarray<double>( fftw_malloc(sizeof(double) * sz), sz);
 		wf_DDY_hc = (double *) fftw_malloc(sizeof(double) * sz);
 		wf_DY_hc = (double *) fftw_malloc(sizeof(double) * sz);
+		wf_deconv = (double *) fftw_malloc(sizeof(double) * sz);
+		wf_DECONV = (double *) fftw_malloc(sizeof(double) * sz);
+		wf_DECONV_rho = std::valarray<double>( fftw_malloc(sizeof(double) * sz), sz);
+		wf_DECONV_phi = std::valarray<double>( fftw_malloc(sizeof(double) * sz), sz);
 		plan_r2hc_Ptr = NULL;
 		plan_hc2r_Ptr = NULL;
 		return true;
@@ -239,6 +235,23 @@ namespace CookieBox_pkg
 	//	Eventually... //
 	//	Lets use the sparsity rather than fill the entire ND array	//
 	//	std::map gives a key::value pair	//
+	bool Acqiris::setDeconvKernel(void)
+	{
+		size_t sz = m_lims.at(bins);
+		std::fill_n(wf_deconv+9,sz-9,0.);
+		wf_deconv[1] = 0.25;
+		wf_deconv[2] = 0.75;
+		wf_deconv[3] = 1.00;
+		wf_deconv[4] = 0.9;
+		wf_deconv[5] = 0.75;
+		wf_deconv[6] = 0.5;
+		wf_deconv[7] = 0.25;
+		wf_deconv[8] = 0.1;
+		fftw_execute_r2r(*plan_r2hc_Ptr, wf_deconv, wf_DECONV );
+		hcToPolar(sz,wf_DECONV,wf_DECONV_rho,wf_DECONV_phi);
+		m_deconvKernelSet = true;
+		return true;
+	}
 
 	bool Acqiris::filtered_fill(Event& evt, Env& env, a5d_ll_2dview_t & slice, a4d_ll_1dview_t & shotslice)
 	{
@@ -277,7 +290,80 @@ namespace CookieBox_pkg
 			// fftw makes un-normalized transforms, so we need to divid by root(n) for each transform (or n for each back and forth
 			fftw_execute_r2r(*plan_r2hc_Ptr, wf_y, wf_Y_hc );
 			// fftw makes un-normalized transforms, so we need to divid by root(n) for each transform (or n for each back and forth
+			scaleVec(sz,wf_Y_hc,1.0/std::sqrt(double(sz))); // this is really to prevent overflow
+			size_t bwd = m_bwd_lim[chan];
+			float nr = m_bwd_nr[chan];
+			for( size_t s=1;s<bwd;++s){
+				double lpf = 0.5*(1.0 + std::cos(double(s)/(double)bwd *  M_PI));
+				double f = lpf/(nr+lpf); // poor man's weiner filter
+				wf_Y_hc[s] *= f;
+				wf_Y_hc[sz-s] *= f;
+			}	
+			for( unsigned s=bwd;s<sz/2;++s){
+				wf_Y_hc[s] = wf_Y_hc[sz-s] = wf_DDY_hc[s] = wf_DDY_hc[sz-s] = 0.;
+			}
+			wf_Y_hc[sz/2] = 0.;
+			fftw_execute_r2r(*plan_hc2r_Ptr, wf_Y_hc, wf_y);
+			scaleVec(sz,wf_y,1.0/std::sqrt(double(sz))); // this is really to prevent overflow
+			for (size_t s=0;s<sz;++s){
+				slice[chan][s] += (int16_t)std::max(wf_y[s]/m_thresh[chan],0.);
+				m_data[chan][s] = (uint16_t)std::max(wf_y[s]/m_thresh[chan],0.);
+			}
+			++shotslice[chan]; 
+		}
+		return true;
+	}
+
+	bool Acqiris::filtered_deconv_fill(Event& evt, Env& env, a5d_ll_2dview_t & slice, a4d_ll_1dview_t & shotslice)
+	{
+		// use this method to fill a slice of the multi_array, but incorporating the Y conv ddY filter, where we want the histogram.
+		m_srcPtr = evt.get(m_srcStr);
+		if (!m_srcPtr.get()){return false;}
+		if (m_getConfig){std::cout << getConfig(env);}
+
+		if (m_data.size() != m_nchannels)
+			m_data.resize(m_nchannels);
+		if (m_data.back().size() != m_lims.at(bins)){
+			for (unsigned c=0;c<m_data.size();++c)
+				m_data[c].resize(m_lims.at(bins),0);
+		}
+		if (!m_deconvKernelSet){
+			if (!setDeconvKernel()){
+				std::cerr << "Couldn't setDeconvKernel()\n" << std::flush;
+				return false;
+			}
+		}
+
+		for (unsigned chan=0;chan<m_nchannels;++chan){
+
+			wf_t wf = m_srcPtr->data(chan).waveforms(); // the 2D'ness of this is for the unused segments, not the channels.
+			
+
+			const int segment = 0; // [chris ogrady] always 0 for LCLS data taken so far (a feature of the acqiris we don't use)
+			long long basesum;
+			basesum = 0;
+			for (unsigned s = m_baselims.at(start); s < m_baselims.at(stop);++s){
+				// fill baseline //
+				basesum += wf[segment][s];
+			}
+
+			size_t sz = m_lims.at(bins);
+			for (unsigned s = 0; s < sz; ++s) {
+				long int val = (wf[segment][m_lims.at(start) + s] - basesum/m_baselims.at(bins));
+				if (m_invert)
+					val *= -1;
+				wf_y[s] = double(val);
+			}
+			// fftw makes un-normalized transforms, so we need to divid by root(n) for each transform (or n for each back and forth
+			fftw_execute_r2r(*plan_r2hc_Ptr, wf_y, wf_Y_hc );
+			// fftw makes un-normalized transforms, so we need to divid by root(n) for each transform (or n for each back and forth
 			scaleVec(sz,wf_Y_hc,1.0/std::sqrt(double(sz)));
+			hcToPolar(sz,wf_Y_hc,wf_Y_rho,wf_Y_phi); // moved to polar representation rho*exp(1i*phi) for sake of logarithm of rho used in deconvolution with wf_DECONV_rho
+			std::valarray<double> res_rho( std::log(wf_Y_rho) - std::log(wf_DECONV_rho));
+			std::valarray<double> res_phi(wf_Y_phi - wf_DECONV_phi);
+			polarTohc(sz,res_rho,res_phi,wf_Y_hc);
+			
+			
 			size_t bwd = m_bwd_lim[chan];
 			float nr = m_bwd_nr[chan];
 			for( size_t s=1;s<bwd;++s){
@@ -296,12 +382,25 @@ namespace CookieBox_pkg
 				slice[chan][s] += (int16_t)std::max(wf_y[s]/m_thresh[chan],0.);
 				m_data[chan][s] = (uint16_t)std::max(wf_y[s]/m_thresh[chan],0.);
 			}
-
-			
 			++shotslice[chan]; 
 		}
 		return true;
+	}
 
+	void Acqiris::setthresh(std::vector<double> in)
+	{
+		m_thresh.resize(in.size(),1e5);
+		std::copy(in.begin(),in.end(),m_thresh.begin());
+	}
+	void Acqiris::setbwdlim(std::vector<size_t> in)
+	{
+		m_bwd_lim.resize(in.size(),200);
+		std::copy(in.begin(),in.end(),m_bwd_lim.begin());
+	}
+	void Acqiris::setbwdnr(std::vector<float> in)
+	{
+		m_bwd_nr.resize(in.size(),0.1);
+		std::copy(in.begin(),in.end(),m_bwd_nr.begin());
 	}
 	bool Acqiris::ydy_fill(Event& evt, Env& env, a5d_ll_2dview_t & slice, a4d_ll_1dview_t & shotslice)
 	{

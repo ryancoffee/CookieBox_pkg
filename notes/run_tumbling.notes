@@ -33,6 +33,20 @@ That bsubx can be run as this also
 /afs/slac.stanford.edu/package/lsf/curr/@sys/bin/bsubx -n 12 -q psanaq mpirun python ./mpi_driver.py -n 0 -c psana_tumbling.cfg exp=amoi0314:run=172
 
 
+To edit code and build with scons  
+ssh psbuild-rhel7
+cd ~/analysis_2015/
+source runpre.bash
+sit_setup
+
+
 
 To run without batch
 mpirun -n 4 python ./mpi_driver.py -n 10000 -c psana_tumbling.cfg exp=amoi0314:run=164
+
+
+bhosts -w psanafarm
+to ckech the farm resources....
+bjobs -uall -q psfehq
+bjobs -uall -q psanaq
+

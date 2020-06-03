@@ -84,6 +84,7 @@ class Acqiris
 
 		bool ydy_fill(Event& evt, Env& env, a5d_ll_2dview_t & slice, a4d_ll_1dview_t & shotslice);
 		bool yddy_fill(Event& evt, Env& env, a5d_ll_2dview_t & slice, a4d_ll_1dview_t & shotslice);
+		bool filtered_deconv_fill(Event& evt, Env& env, a5d_ll_2dview_t & slice, a4d_ll_1dview_t & shotslice);
 		bool filtered_fill(Event& evt, Env& env, a5d_ll_2dview_t & slice, a4d_ll_1dview_t & shotslice);
 		bool fill(Event& evt, Env& env, a5d_ll_2dview_t & slice, a4d_ll_1dview_t & shotslice);
 		bool fill(Event& evt, Env& env, a4d_ll_2dview_t & slice);
@@ -103,10 +104,19 @@ class Acqiris
 		double * wf_ddy; // = (double *) fftw_malloc(sizeof(double) * sz);
 		double * wf_dy; // = (double *) fftw_malloc(sizeof(double) * sz);
 		double * wf_Y_hc; // = (double *) fftw_malloc(sizeof(double) * sz);
+		std::valarray<double> wf_Y_rho;
+		std::valarray<double> wf_Y_phi;
 		double * wf_DDY_hc; // = (double *) fftw_malloc(sizeof(double) * sz);
 		double * wf_DY_hc; // = (double *) fftw_malloc(sizeof(double) * sz);
+		double * wf_deconv;  // = (double *) fftw_malloc(sizeof(double) * sz);
+		double * wf_DECONV; // = (double *) fftw_malloc(sizeof(double) * sz);
+		std::valarray<double> wf_DECONV_rho;
+		std::valarray<double> wf_DECONV_phi; 
 		fftw_plan* plan_r2hc_Ptr;
 		fftw_plan* plan_hc2r_Ptr;
+
+		bool setDeconvKernel(void);
+		bool m_deconvKernelSet;
 
 		bool m_use,m_print,m_invert;
 		std::ofstream m_outfile;

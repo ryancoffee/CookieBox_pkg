@@ -211,6 +211,7 @@ class CookieBox_mod
 			void setWriteStyle(writeStyle style);
 			bool printSpectra(void);
 			bool printSpectraLegendre(void);
+			bool printShots(void);
 			bool printIntegs(void);
 
 			bool read_e2t_interp_conversion(std::string & filename);

@@ -616,6 +616,7 @@ namespace CookieBox_pkg {
 
 				// Ideally, make a class of accumulators (or signal accumulators) to pass all these slices and things //
 				//if ( m_aq[i].yddy_fill(evt,env,slice,shotslice)) { 
+				//if ( m_aq[i].filtered_deconv_fill(evt,env,slice,shotslice)) { 
 				if ( m_aq[i].filtered_fill(evt,env,slice,shotslice)) { 
 				//if ( m_aq[i].fill(evt,env,slice,shotslice)) { 
 					startchanind += m_aq[i].nchannels();
@@ -975,6 +976,7 @@ namespace CookieBox_pkg {
 			if (!fillLegendreVecs()){std::cerr << "Failed to fillLegendreVecs()" << std::endl;}
 			// std::cerr << "Entering printSpectraLegendre() \n\n\n\n \t\t\t HERE I AM!! \n\n\n\n" << std::endl;
 			if (! printSpectraLegendre()){std::cerr << "Failed to printLegendreSpectra()" << std::endl;}
+			if (! printShots()){std::cerr << "Failed to printShots()" << std::endl;}
 			std::cerr << "Entering print_patch_results() " << std::endl;
 			if (m_patch_compute && !print_patch_results()) { std::cerr << "Failed printing patch results" << std::endl;}
 			//std::cout << "skipping/printing out the spectra ...\t" << std::flush;
@@ -1088,6 +1090,16 @@ namespace CookieBox_pkg {
 		return true;
 	}
 
+	bool CookieBox_mod::printShots(void)
+	{
+		// index order is [0=TimeTool][1=ebeam][2=gasdet][3=chan]
+		// enum DimDefs {ttind,ebind,gdind,chanind,tofind};
+		if (m_rank != m_root_rank){
+			std::cerr << "Trying to print out Legendre projections of m_data_5d but using non-root rank, rank = " << m_rank << std::endl;
+			return false;
+		}
+		return true;
+	}
 	bool CookieBox_mod::printSpectraLegendre(void)
 	{
 		// index order is [0=TimeTool][1=ebeam][2=gasdet][3=chan][4=sample]
@@ -1103,9 +1115,6 @@ namespace CookieBox_pkg {
 		   sp_starts_list = 500. 0
 		   sp_steps_list = 0.25 10
 		   */
-
-
-
 
 		m_kwin.resize(2);
 		m_kwin = (configList("patch_ke_win"));
@@ -1299,6 +1308,18 @@ namespace CookieBox_pkg {
 					filename += details;
 					std::ofstream outfile(filename.c_str(),std::ios::out);
 					outfile << m_tt.getTimeLims();
+
+					filename = m_datadir + std::string("shots_legendre");
+					details = "-" + m_str_experiment + "-r" + m_str_runnum;
+					details += "_e" + boost::lexical_cast<std::string>(e);
+					details += "_g" + boost::lexical_cast<std::string>(g);
+					details += "_l" + boost::lexical_cast<std::string>(l);
+					details += "_tspan" + tspanStr;
+					details += std::string(".dat");
+					filename += details;
+					std::ofstream shotsfile(filename.c_str(),std::ios::out);
+					shotsfile << m_tt.getTimeLims();
+
 					if (m_printLegendreFFTs//){ 
 						&& e==5
 						&& g ==1
@@ -1351,9 +1372,11 @@ namespace CookieBox_pkg {
 								result /= double(shots);
 							}
 							outfile << result << "\t";
+							shotsfile << shots << "\t";
 							timeslice_r[t] = result; 
 						}
 						outfile << "\n";
+						shotsfile << "\n";
 						if (m_printLegendreFFTs
 							&& outabsfile.is_open()
 							&& outargfile.is_open()

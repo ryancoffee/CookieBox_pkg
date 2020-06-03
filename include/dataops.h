@@ -16,6 +16,8 @@
 #include <cmath>
 #include <boost/multi_array.hpp>
 #include <boost/math/tools/polynomial.hpp>
+#include <complex>
+#include <valarray>
 
 namespace CookieBox_pkg {
 
@@ -34,6 +36,38 @@ namespace CookieBox_pkg {
 		}
 		return y;
 	}
+	template <typename T>
+	inline void polarTohc(const size_t sz,const std::valarray<T> rho, const std::valarray<T> phi,T* y)
+	{
+		std::complex<T> z;
+		y[0] = rho[0];
+		for (size_t k=1;k<sz/2;++k){
+			z = std::complex<T>(rho[k],0.) * std::exp(std::complex<T>(0.,phi[k]));
+			y[k] = std::real(z);
+			y[sz-k] = std::imag(z);
+		}
+		y[sz/2] = rho[sz/2];
+	}
+	template <typename T>
+	inline void hcToPolar(const size_t sz,const T* y,std::valarray<T> rho, std::valarray<T> phi)
+	{
+		/*
+		FFTW_HC2R. This consists of the non-redundant half of the complex output for a 1d real-input DFT of size n, stored as a sequence of n real numbers (double) in the format:
+		r0, r1, r2, ..., rn/2, i(n+1)/2-1, ..., i2, i1
+		*/
+		std::complex<T> z;
+		rho[0] = y[0];
+		phi[0] = 0.;
+		for (size_t k=1;k<sz/2;++k){
+			z = std::complex<T>(y[k] , y[sz-k]);
+			rho[k] = rho[sz-k] = std::abs(z);
+			phi[k] = std::arg(z);
+			phi[sz-k] = -phi[k];
+		}
+		rho[sz/2] = y[sz/2];
+		phi[sz/2] = 0.;
+	}
+
 
 	template <typename T>
 	void fixedfilter(T * vec, const size_t sz){
