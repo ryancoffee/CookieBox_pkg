@@ -1,4 +1,5 @@
-#!/reg/g/psdm/sw/releases/ana-current/arch/x86_64-rhel7-gcc48-opt/bin/python
+#!/sdf/data/lcls/ds/amo/amox28216/scratch/all_output/
+#!/reg/g/psdm/sw/releases/ana-current/arch/x86_64-rhel7-gcc48-opt/bin/python ## old, from original pslogin
 
 import psana;
 import numpy as np;
