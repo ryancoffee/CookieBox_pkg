@@ -27,8 +27,9 @@ def main(expstr,runs):
             xt = psana.Detector('xtcav')
             avgimg = np.zeros((1,1),dtype=np.uint16)
             nevent = 0
-            nlimit = 1<<16
-            navglim_shift = 8
+            # seems to be the limit is 1<<19 shots in dark runs
+            nlimit = 1<<12
+            navglim_shift = 7
             nskip = 0
             avgidx = 0
             while nevent < nlimit:
