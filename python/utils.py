@@ -10,6 +10,6 @@ def massage(im):
 def getshape(raw):
     nx = len(raw)
     ny = len(raw[0])
-    print(nx,ny)
+    #print(nx,ny)
     return nx,ny
 

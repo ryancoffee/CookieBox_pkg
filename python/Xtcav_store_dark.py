@@ -12,17 +12,25 @@ import os
 def main(expstr,runs):
     fname = os.getenv('outfile')
     with h5py.File(fname,'a') as f:
+        rungrp = None
         for r in (runs):
+            rkey = 'run_%03i'%int(r)
+            if rkey in list(f.keys()):
+                rungrp = f[rkey]
+            else:
+                rungrp = f.create_group(rkey)
             dsourcestr = 'exp=' + expstr + ':run=' + r
             print("running:\t",dsourcestr)
             print('Need to subtract a running estimate of dark imates')
             ds = psana.DataSource(dsourcestr)
             print(psana.DetNames('detectors'))
             xt = psana.Detector('xtcav')
-            images = []
+            avgimg = np.zeros((1,1),dtype=np.uint16)
             nevent = 0
-            nlimit = 10
-            nskip = 100
+            nlimit = 1<<16
+            navglim_shift = 8
+            nskip = 0
+            avgidx = 0
             while nevent < nlimit:
                 evt = next(ds.events())
                 _ = [next(ds.events()) for i in range(nskip)]
@@ -30,17 +38,36 @@ def main(expstr,runs):
                 if raw is not None:
                     nx,ny = utils.getshape(raw)
                     im = np.zeros((nx,ny),dtype=np.uint16)
+                    if nevent == 0:
+                        avgimg = np.zeros((nx,ny),dtype=np.uint16)
                     for i in range(nx):
                         row = raw[i]
                         for j in range(ny):
                             im[i,j] = row[j]
-                    img = np.copy(im)
-                    img = utils.massage(img)
-                    images += [img]
+                    im = utils.massage(im)
+                    if nevent%(1<<navglim_shift) == 0:
+                        avgimg = np.copy(im)
+                    else:
+                        avgimg += im
+
                 nevent += 1
-                 
-                plt.imshow(images[-1],origin='lower')
-                plt.show()
+                if nevent%(1<<navglim_shift) == 0:
+                    avgimg >>= navglim_shift 
+                    akey = 'avg_%03i'%avgidx
+                    if akey in list(rungrp.keys()):
+                        del rungrp[akey]
+                    print('storing %s'%akey)
+                    avimds = rungrp.create_dataset(akey,data=avgimg)
+                    avimds.attrs['avgindex'] = avgidx
+                    avimds.attrs['navg'] = 1<<navglim_shift
+                    avgidx += 1
+
+                
+                    '''
+                    plt.imshow(avgimg,origin='lower')
+                    plt.title('avgindex = %03i'%avimds.attrs['avgindex'])
+                    plt.show()
+                    '''
     return
 
 if __name__ == '__main__':
