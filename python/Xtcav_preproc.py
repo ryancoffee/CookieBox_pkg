@@ -50,49 +50,61 @@ def main(expstr,runs):
             ds = psana.DataSource(dsourcestr)
             print(psana.DetNames('detectors'))
             xt = psana.Detector('xtcav')
-            images = []
-            boolimages = []
             #for nevent,evt in enumerate(ds.events()):
             nevent = 0
             nlimit = 10
 
-            while nevent < nlimit:
-                #_ = [next(ds.events) for i in range(nskip)]
-                evt = next(ds.events())
-                raw = xt.raw(evt)
-                if raw is not None:
-                    ny,nx = utils.getshape(raw)
-                    im = np.zeros((ny,nx),dtype=int)
-                    for i in range(ny):
-                        row = raw[i]
-                        for j in range(nx):
-                            im[i,j] = row[j]
-                    img = np.array(im,dtype=np.uint16)
-                    img = cv2.erode(img,kernel=(3,3))
-                    img = cv2.blur(img,ksize=(3,3))
-                    images += [img.astype(np.int16) - darkimg.astype(np.int16)]
-                    boolimages += [np.zeros((ny,nx),dtype=bool)]
-                    thresh = np.max(images[-1])>>3
-                    threshinds = np.where(images[-1]>thresh)
-                    print('nx = %i'%nx)
-                    print('ny = %i'%ny)
-                    print(threshinds[0])
-                    # horizontal is ind 1, vertical is ind 0
-                    vert = sum(threshinds[0])//len(threshinds[0])
-                    horiz = sum(threshinds[1])//len(threshinds[1])
+            with h5py.File(os.environ['outfile'],'w') as of:
+                grp = of.create_group('xtcav')
 
-                    boolimages[-1][threshinds] = True
-                    
-                    plt.imshow(boolimages[-1],origin='lower')
-                    plt.title('centroid at (%i,%i)'%(horiz,vert))
-                    plt.colorbar()
-                    plt.clim(0,1)
-                    plt.show()
-                nevent += 1
+                while nevent < nlimit:
+                    #_ = [next(ds.events) for i in range(nskip)]
+                    evt = next(ds.events())
+                    raw = xt.raw(evt)
+                    if raw is not None:
+                        ny,nx = utils.getshape(raw)
+                        im = np.zeros((ny,nx),dtype=int)
+                        for i in range(ny):
+                            row = raw[i]
+                            for j in range(nx):
+                                im[i,j] = row[j]
+                        img = np.array(im,dtype=np.int16)
+                        img = cv2.erode(img,kernel=(3,3))
+                        img = cv2.blur(img,ksize=(3,3))
+                        img -= darkimg.astype(np.int16)
+                        boolimg = np.zeros((ny,nx),dtype=bool)
+                        thresh = np.max(img)>>3
+                        threshinds = np.where(img>thresh)
+                        # print('nx = %i'%nx)
+                        # print('ny = %i'%ny)
+                        # print(threshinds[0])
+                        # horizontal is ind 1, vertical is ind 0
+                        vert = sum(threshinds[0])//len(threshinds[0])
+                        horiz = sum(threshinds[1])//len(threshinds[1])
+
+                        rollv = (ny>>1) - vert
+                        rollh = (nx>>1) - horiz
+                        img = np.roll(img,rollv,axis=0)
+                        img = np.roll(img,rollh,axis=1)
+
+                        evtimg = grp.create_dataset('evt_%08i'%(nevent),data=img,dtype=np.int16)
+                        evtimg.attrs.create('vertthresh',data=threshinds[0])
+                        evtimg.attrs.create('horizthresh',data=threshinds[1])
+                        evtimg.attrs.create('centroid',data=(horiz,vert))
+                        evtimg.attrs.create('roll_img',data=(rollh,rollv))
+                        evtimg.attrs.create('erode_blur_kernel',data=(3,3))
 
 
-
-            
+    
+                        # boolimages[-1][threshinds] = True
+                        
+                        '''
+                        plt.imshow(img,origin='lower')
+                        plt.colorbar()
+                        plt.clim(0,1<<9)
+                        plt.show()
+                        '''
+                    nevent += 1
     return
 
 if __name__ == '__main__':
