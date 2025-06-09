@@ -12,3 +12,5 @@ Comparing an individual block average image to the run average (mean of block av
 
 ![Comparison Plot](./figures/compare68_58.png)  
 Comparing a block average in run 68 with the whole run average (mean of block averages) in run 58.  
+
+This indicates that the camera baseline indeed changes over the course of runs at best, and over the course of shots within a run at worst.  
