@@ -12,6 +12,8 @@ import h5py
 import math
 import random
 
+plotting = False # use this to supress plotting
+
 def main(expstr,runs):
     darkfilename = os.environ['darkfile']
     m = re.search(r'dark.*h5$',darkfilename)
@@ -40,11 +42,10 @@ def main(expstr,runs):
                 darkimg += df[darkkey][k][()]
             darkimg >>= (pow2-1) 
 
-            '''
-            plt.imshow(darkimg,origin='lower')
-            plt.colorbar()
-            plt.show()
-            '''
+            if plotting:
+                plt.imshow(darkimg,origin='lower')
+                plt.colorbar()
+                plt.show()
 
             print("running:\t",dsourcestr)
             ds = psana.DataSource(dsourcestr)
@@ -52,12 +53,14 @@ def main(expstr,runs):
             xt = psana.Detector('xtcav')
             #for nevent,evt in enumerate(ds.events()):
             nevent = 0
-            nlimit = 10
+            nlimit = 1<<10
 
             with h5py.File(os.environ['outfile'],'w') as of:
                 grp = of.create_group('xtcav')
 
                 while nevent < nlimit:
+                    if utils.bit_count(nevent)==1:
+                        print('working event: %i'%(nevent))
                     #_ = [next(ds.events) for i in range(nskip)]
                     evt = next(ds.events())
                     raw = xt.raw(evt)
@@ -73,7 +76,7 @@ def main(expstr,runs):
                         img = cv2.blur(img,ksize=(3,3))
                         img -= darkimg.astype(np.int16)
                         boolimg = np.zeros((ny,nx),dtype=bool)
-                        thresh = np.max(img)>>3
+                        thresh = max(np.max(img)>>3,1<<7)
                         threshinds = np.where(img>thresh)
                         # print('nx = %i'%nx)
                         # print('ny = %i'%ny)
@@ -88,8 +91,8 @@ def main(expstr,runs):
                         img = np.roll(img,rollh,axis=1)
 
                         evtimg = grp.create_dataset('evt_%08i'%(nevent),data=img,dtype=np.int16)
-                        evtimg.attrs.create('vertthresh',data=threshinds[0])
-                        evtimg.attrs.create('horizthresh',data=threshinds[1])
+                        #evtimg.attrs.create('vertthresh',data=threshinds[0])
+                        #evtimg.attrs.create('horizthresh',data=threshinds[1])
                         evtimg.attrs.create('centroid',data=(horiz,vert))
                         evtimg.attrs.create('roll_img',data=(rollh,rollv))
                         evtimg.attrs.create('erode_blur_kernel',data=(3,3))
@@ -98,12 +101,13 @@ def main(expstr,runs):
     
                         # boolimages[-1][threshinds] = True
                         
-                        '''
-                        plt.imshow(img,origin='lower')
-                        plt.colorbar()
-                        plt.clim(0,1<<9)
-                        plt.show()
-                        '''
+                        
+                        if plotting:
+                            plt.imshow(img,origin='lower')
+                            plt.colorbar()
+                            plt.clim(0,1<<9)
+                            plt.show()
+                        
                     nevent += 1
     return
 

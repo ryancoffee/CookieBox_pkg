@@ -13,3 +13,6 @@ def getshape(raw):
     #print(nx,ny)
     return nx,ny
 
+def bit_count(x:int):
+    return bin(x).count("1")
+
