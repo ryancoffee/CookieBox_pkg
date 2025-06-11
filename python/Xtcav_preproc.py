@@ -53,13 +53,13 @@ def main(expstr,runs):
             xt = psana.Detector('xtcav')
             #for nevent,evt in enumerate(ds.events()):
             nevent = 0
-            nlimit = 1<<10
+            nlimit = 1<<14
 
             with h5py.File(os.environ['outfile'],'w') as of:
                 grp = of.create_group('xtcav')
 
                 while nevent < nlimit:
-                    if utils.bit_count(nevent)==1:
+                    if utils.bit_count(nevent)==1: # ^ (utils.bit_count(nevent)==2 and utils.bit_count(nevent&(1<<8))==1):
                         print('working event: %i'%(nevent))
                     #_ = [next(ds.events) for i in range(nskip)]
                     evt = next(ds.events())
@@ -82,8 +82,14 @@ def main(expstr,runs):
                         # print('ny = %i'%ny)
                         # print(threshinds[0])
                         # horizontal is ind 1, vertical is ind 0
-                        vert = sum(threshinds[0])//len(threshinds[0])
-                        horiz = sum(threshinds[1])//len(threshinds[1])
+                        if len(threshinds[0]) == 0:
+                            vert = ny>>1
+                        else:
+                            vert = sum(threshinds[0])//len(threshinds[0])
+                        if len(threshinds[1])==0:
+                            horiz = nx>>1
+                        else:
+                            horiz = sum(threshinds[1])//len(threshinds[1])
 
                         rollv = (ny>>1) - vert
                         rollh = (nx>>1) - horiz
