@@ -1,0 +1,25 @@
+/sdf/data/lcls/ds/amo/amo86815/scratch/xtcav_bright_images_71.h5
+2025-06-12 14:23:31.755 [WRN] {XtcInput.XtcStreamDgIter} XtcStreamDgIter.cpp:299 - control stream has two datagrams with the same seconds/nanoseconds timestamp. The latter one is not marked as a split event. REMOVING the existing one, and Discarding the latter one: path=/sdf/data/lcls/ds/AMO/amo86815/xtc/e609-r0071-s80-c00.xtc offset=3083449132 sec=1430144999 nano=489698603 fiducials=13611 transition=L1Accept
+2025-06-12 14:27:33.216 [WRN] {XtcInput.XtcStreamDgIter} XtcStreamDgIter.cpp:299 - control stream has two datagrams with the same seconds/nanoseconds timestamp. The latter one is not marked as a split event. REMOVING the existing one, and Discarding the latter one: path=/sdf/data/lcls/ds/AMO/amo86815/xtc/e609-r0071-s80-c00.xtc offset=5092271404 sec=1430145046 nano=104756921 fiducials=30393 transition=L1Accept
+2025-06-12 14:28:55.364 [WRN] {XtcInput.XtcStreamDgIter} XtcStreamDgIter.cpp:299 - control stream has two datagrams with the same seconds/nanoseconds timestamp. The latter one is not marked as a split event. REMOVING the existing one, and Discarding the latter one: path=/sdf/data/lcls/ds/AMO/amo86815/xtc/e609-r0071-s80-c00.xtc offset=5768762128 sec=1430145059 nano=750684651 fiducials=35307 transition=L1Accept
+running amo86815: runs 71
+hutch = amo
+expnum = 86815
+dark image filename = 	/sdf/data/lcls/ds/amo/amo86815/scratch/xtcav_dark_images_68_62_58.h5
+using darkruns 68
+running:	 exp=amo86815:run=71
+[('XrayTransportDiagnostic.0:Opal1000.0', 'xtcav', ''), ('NoDetector.0:Evr.0', '', ''), ('AmoEndstation.0:Acqiris.1', 'ACQ1', ''), ('EBeam', '', ''), ('PhaseCavity', '', ''), ('FEEGasDetEnergy', '', ''), ('AmoEndstation.0:Acqiris.4', 'ACQ4', ''), ('ControlData', '', '')]
+working event: 1
+working event: 2
+working event: 4
+working event: 8
+working event: 16
+working event: 32
+working event: 64
+working event: 128
+working event: 256
+working event: 512
+working event: 1024
+working event: 2048
+working event: 4096
+working event: 8192

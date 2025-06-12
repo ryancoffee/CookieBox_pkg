@@ -57,6 +57,8 @@ def main(expstr,runs):
 
             with h5py.File(os.environ['outfile'],'w') as of:
                 grp = of.create_group('xtcav')
+                of.create_dataset('dark',data=darkimg,dtype=np.uint16)
+                
 
                 while nevent < nlimit:
                     if utils.bit_count(nevent)==1: # ^ (utils.bit_count(nevent)==2 and utils.bit_count(nevent&(1<<8))==1):
