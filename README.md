@@ -1,6 +1,12 @@
 For LCLS-1 data processing, from the root directory (`CookieBox_pkg`)
 
 # Dark Images
+New slurm way to compute the dark images, also storing in single run per .h5 file.  
+```bash
+./slurmdark.bash amo86815 13 18 26 40 46 58 62 68
+```
+
+This is now used only if running directly from an interactive node.  
 ```bash
 source init.bash
 python3 python/Xtcav_store_dark.py amo86815 58 62 68

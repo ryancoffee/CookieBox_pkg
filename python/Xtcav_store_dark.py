@@ -38,6 +38,8 @@ def main(expstr,runs):
                 raw = xt.raw(evt)
                 if raw is not None:
                     nx,ny = utils.getshape(raw)
+                    if nx==1 or ny==1:
+                        next
                     im = np.zeros((nx,ny),dtype=np.uint16)
                     if nevent == 0:
                         avgimg = np.zeros((nx,ny),dtype=np.uint16)
