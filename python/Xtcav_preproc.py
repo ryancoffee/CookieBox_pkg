@@ -62,6 +62,7 @@ def main():
         nevent = 0
         nlimit = 1<<14
 
+        print("opening " + os.environ['brightfile'])
         with h5py.File(os.environ['brightfile'],'w') as of:
             grp = of.create_group('xtcav')
             of.create_dataset('dark',data=darkimg,dtype=np.uint16)
@@ -134,14 +135,17 @@ if __name__ == '__main__':
         print('expnum = %s'%m.group(2))
         hutchname = m.group(1)
 
-    m = re.search(r'^/sdf/.*scratch*',os.environ['darkpath'])
+    print(os.environ['darkpath'])
+    print(os.environ['brightpath'])
+
+    m = re.search(r'^/sdf/data/lcls/.*',os.environ['darkpath'])
     if m:
         print('dark image path = \t%s'%(m.group(0)))
     else:
         print('no dark path given')
         os.environ['darkpath'] = 'none'
 
-    m = re.search(r'^/sdf/.*scratch*',os.environ['brightpath'])
+    m = re.search(r'^/sdf/data/lcls/.*',os.environ['brightpath'])
     if m:
         print('bright image path = \t%s'%(m.group(0)))
     else:
