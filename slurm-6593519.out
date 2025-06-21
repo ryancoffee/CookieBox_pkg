@@ -1,1 +1,39 @@
 /sdf/data/lcls/ds/amo/amoi0216/scratch/xtcav_dark_images_21.h5
+running amoi0216: runs 21
+hutch = amo
+expnum = i0216
+running:	 exp=amoi0216:run=21
+Need to subtract a running estimate of dark imates
+[('XrayTransportDiagnostic.0:Opal1000.0', 'xtcav', ''), ('NoDetector.0:Evr.0', '', ''), ('AmoEndstation.0:Acqiris.2', 'ACQ2', ''), ('AmoEndstation.0:Acqiris.1', 'ACQ1', ''), ('EBeam', '', ''), ('FEEGasDetEnergy', '', ''), ('ControlData', '', '')]
+storing avg_000
+storing avg_001
+storing avg_002
+storing avg_003
+storing avg_004
+storing avg_005
+storing avg_006
+storing avg_007
+storing avg_008
+storing avg_009
+storing avg_010
+storing avg_011
+storing avg_012
+storing avg_013
+storing avg_014
+storing avg_015
+storing avg_016
+storing avg_017
+storing avg_018
+storing avg_019
+storing avg_020
+storing avg_021
+storing avg_022
+storing avg_023
+storing avg_024
+storing avg_025
+storing avg_026
+storing avg_027
+storing avg_028
+storing avg_029
+storing avg_030
+storing avg_031
