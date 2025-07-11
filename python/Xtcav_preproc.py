@@ -60,7 +60,7 @@ def main():
         xt = psana.Detector('xtcav')
         #for nevent,evt in enumerate(ds.events()):
         nevent = 0
-        nlimit = 1<<14
+        nlimit = 1<<16
 
         print("opening " + os.environ['brightfile'])
         with h5py.File(os.environ['brightfile'],'w') as of:
