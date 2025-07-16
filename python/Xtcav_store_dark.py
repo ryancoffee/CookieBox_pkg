@@ -91,7 +91,7 @@ if __name__ == '__main__':
         hutchname = m.group(1)
 
     # /sdf/data/lcls/ds/amo/amo86815/scratch/
-    outpath = '/sdf/data/lcls/ds/' + hutchname + '/' + expstr + '/scratch/xtcav_dark_images_' + '_'.join(runstrs) + '.h5'
+    outpath = '/sdf/data/lcls/ds/' + hutchname + '/' + expstr + '/scratch/xtcav_dark_images_run' + '_'.join(runstrs) + '.h5'
     os.environ['outfile'] = outpath
     os.system('echo $outfile')
     main(expstr,runstrs)

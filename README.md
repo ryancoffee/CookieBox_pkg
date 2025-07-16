@@ -1,30 +1,31 @@
-For LCLS-1 data processing, from the root directory (`CookieBox_pkg`)
+For LCLS-1 data processing, from the root directory (`CookieBox_pkg`)  
+
+# Bright Images
+The runscript is in `./runscript.bash` and it sources the `init.bash` and launches the `./python/Xtcav_preproc.py` with darkpath(input), brightpath(output), and expname and bright run numbers.  
+The slurmscript allows batch submitting a list of run numbers as follows...   
+```bash
+./slurmscript.bash /sdf/data/lcls/ds/amo/amoi0216/scratch /sdf/data/lcls/ds/amo/amoi0216/scratch amoi0216 17 18 19 20 21 22
+```
+
 
 # Dark Images
-New slurm way to compute the dark images, also storing in single run per .h5 file.  
+New slurm way to compute the dark images, also storing in single run per darkimage.h5 file.  
 ```bash
 ./slurmdark.bash amo86815 13 18 26 40 46 58 62 68
 ```
 
-This is now used only if running directly from an interactive node.  
+This is now used only if running directly from an interactive node.   
 ```bash
 source init.bash
 python3 python/Xtcav_store_dark.py amo86815 58 62 68
 ```
 
 ![Compare Plot](./figures/compare58_58.png)  
-Comparing an individual block average image to the run average (mean of block averages) in fun 58.  
+Comparing an individual block average image to the run average (mean of block averages) in fun 58.   
 
 
-![Comparison Plot](./figures/compare68_58.png)  
-Comparing a block average in run 68 with the whole run average (mean of block averages) in run 58.  
+![Comparison Plot](./figures/compare68_58.png)   
+Comparing a block average in run 68 with the whole run average (mean of block averages) in run 58.   
 
 This indicates that the camera baseline indeed changes over the course of runs at best, and over the course of shots within a run at worst.  
 
-
-# Bright Images
-The runscript is in `./runscript.bash` and it sources the `init.bash` and launches the `./python/Xtcav_preproc.py` with dark and expname and runnum.  
-The slurmscript allows batch submitting a list of run numbers with the associated dark and expname as follows...   
-```bash
-./slurmscript.bash /sdf/data/lcls/ds/amo/amo86815/scratch/xtcav_dark_images_68_62_58.h5 amo86815 69 59 61 63 70 71 72 73
-```
