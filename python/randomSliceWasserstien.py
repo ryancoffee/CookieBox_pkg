@@ -6,8 +6,15 @@ import random
 import matplotlib.pyplot as plt
 import sys
 import math
+import DataSelector
 
-def main(aname:str,bname:str):
+def main(fname:str):
+    trainselect = DataSelector.DataSelector(32)
+    trainselect.Load(fname,1<<9)
+    trainselect.PlotDistributions()
+    return
+
+def main2(aname:str,bname:str):
     samplerows:int = 64
     maxhist = 1<<11
     rmse_hist = [0]*((maxhist>>2)+1)
@@ -53,7 +60,6 @@ def main(aname:str,bname:str):
         plt.legend()
         plt.show()
         #grab two images
-        
         #select random rows
         #evaluate cumsum and then MSE for matched random rows.
     return
@@ -61,5 +67,8 @@ def main(aname:str,bname:str):
 if __name__ == '__main__':
     if len(sys.argv)<2:
         print('give me two files to work with for now')
+    elif len(sys.argv)==3:
+        main2(sys.argv[1],sys.argv[2])
     else:
-        main(sys.argv[1],sys.argv[2])
+        main(sys.argv[1])
+

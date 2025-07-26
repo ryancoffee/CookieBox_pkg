@@ -12,6 +12,7 @@ import cv2
 import re
 import hashlib
 import time
+import DataSelector
 
 def oversample(im,shape,factor=4,plotting=False):
     lv,lh = shape
