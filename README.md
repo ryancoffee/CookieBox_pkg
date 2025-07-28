@@ -1,5 +1,8 @@
 For LCLS-1 data processing, from the root directory (`CookieBox_pkg`)  
 
+# DataSelector
+Now there is a DataSelector that composes a training set of up to 512 images that represent a leveled representation of the random-slice-Wasserstein version of nearest neighbor distribution.  
+
 
 # Bright Images
 The runscript is in `./runscript.bash` and it sources the `init.bash` and launches the `./python/Xtcav_preproc.py` with darkpath(input), brightpath(output), and expname and bright run numbers.  

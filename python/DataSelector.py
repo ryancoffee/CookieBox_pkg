@@ -52,6 +52,19 @@ class DataSelector:
                     print(len(self.trainSet))
         return self
 
+    def StoreH5(self,outname:str):
+        with h5py.File(outname,'a') as o:
+            if 'xtcav' not in o.keys():
+                o.create_group('xtcav')
+            grp = o['xtcav'].create_group('train')
+            grp.create_dataset('images',data=self.trainSet)
+            grp.create_dataset('keys',data=self.trainKeys)
+            grp.create_dataset('measures',data=self.trainMeasures)
+            grp.create_dataset('measurerows',data=self.measurerows)
+            grp.create_dataset('rmseHist',data=self.rmse_hist)
+            grp.create_dataset('rmseLeveledHist',data=self.rmse_leveled_hist)
+        return self
+
     def getNeighborDistance_zeroth(self,im): # return a the nearest neighbor distance, but only used for correcting the 0th
         d:int = 1<<16
         for sample in self.trainSet[1:]:

@@ -12,7 +12,6 @@ import cv2
 import re
 import hashlib
 import time
-import DataSelector
 
 def oversample(im,shape,factor=4,plotting=False):
     lv,lh = shape
@@ -40,7 +39,6 @@ def main():
     print('for now, running single bright file.  Think of federating the eigenimage calculation across bright files in the future')
     print('Good god, I have to crop into the image significantly and change stride to 4 in both dimensions in order to fit the memory on iana!  Otherwise in the tens of gigs.')
     nimages:int = 0
-    batchsize:int = 1<<12
     datalist = None
     lenv = 1
     lenh = 1
@@ -53,16 +51,14 @@ def main():
         if not os.path.exists(opath):
             os.mkdir(opath,mode=outmode)
         (ofname,ext) = os.path.splitext(iname)
-        oname = os.path.join(opath,ofname + '_eigenimages' + ext)
+        oname = os.path.join(opath,ofname + '_eigenimages_train' + ext)
 
 
         with h5py.File(fname,'r') as f:
             start = time.time()
-            xt = f['xtcav']
-            evtkeys = list(xt.keys())
-            random.shuffle(evtkeys)
-            for k in evtkeys[:batchsize]:
-                im = cv2.blur(np.array(xt[k][64:-64,200:-200]),ksize=(3,3))[::4,::4]
+            xt = f['xtcav']['train']['images'][()]
+            for i in xt:
+                im = cv2.blur(np.array(i[64:-64,200:-200]),ksize=(3,3))[::4,::4]
                 (lenv,lenh) = im.shape
                 if type(datalist) == type(None):
                     datalist = [im.flatten()]
@@ -109,29 +105,19 @@ def main():
                 grp.attrs.create('sourcefile',data=fname)
                 grp.attrs.create('time',data=thistime)
                 grp.attrs.create('duration',data=svdtime)
-                grp.attrs.create('batchsize',data=batchsize)
-                mynotes = 'Eigenimages computed from file %s \nwith %i images with keys in group[sourceimages]\ncalculated at %s'%(fname,batchsize,thistime)
+                mynotes = 'Eigenimages computed from file %s \nwith %i images with keys in group[sourceimages]\ncalculated at %s'%(fname,len(datalist),thistime)
                 mynotes += '\nDuration for computation = %.2f [sec]'%(svdtime)
                 mynotes += '\nOversampled versions of the eigenimages are also being stored'
                 grp.attrs.create('notes',data=mynotes)
                 grp.create_dataset('eigenvalues',data=eigvals)
                 grp.create_dataset('avgimage',data=avgimg.reshape((lenv,lenh)))
                 grp.create_dataset('avgimage_oversampled',data=oversample(avgimg,shape=(lenv,lenh),factor=4,plotting=False))
-                grp.create_dataset('sourceimages',data=evtkeys[:batchsize])
+                #grp.create_dataset('sourceimages',data=evtkeys[:batchsize])
                 for i in range(1<<8):
                     eigim = grp.create_dataset('eigenimage_%03i'%i,data=eigvecs[i,:].reshape((lenv,lenh))) 
                     eigim.attrs.create('note',data='# this is undersampled by factor of 4, so really could inflate back wiht fft oversample method.')
                     eigimover = grp.create_dataset('eigenimage_oversampled_%03i'%i,data=oversample(eigvecs[i,:],shape=(lenv,lenh),factor=4,plotting=False)) 
                     eigimover.attrs.create('note',data='# this is artificially oversampled by padding with zeros to get up to the original shape before the undersampling for sake of SVD')
-
-            for k in evtkeys[batchsize:batchsize + 10]:
-                im = np.array(xt[k][64:-64:4,200:-200:4]).flatten()
-                coeffs = [np.inner(im,eigvecs[i,:]) for i in range(1<<8)]
-                plt.scatter(np.arange(len(coeffs)),coeffs,label=k)
-            plt.show()
-            
-
-
 
     return
 
