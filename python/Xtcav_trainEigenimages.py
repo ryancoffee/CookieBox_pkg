@@ -49,17 +49,17 @@ def main():
     filehash = hashlib.blake2b(digest_size=2)
     if not os.path.exists(opath):
         os.mkdir(opath,mode=outmode)
+    thistime = time.ctime()
+    filehash.update(str(thistime).encode())
     oname = os.path.join(opath,'Composed_eigenimages_train_' + filehash.hexdigest() + '.h5')
-    print(oname)
-    return
+    print('outname = %s'%(oname))
 
     start = time.time()
 
     for fname in sys.argv[2:]:
         (fpath,iname) = os.path.split(fname)
-        (fname,ext) = os.path.splitext(iname)
-        inamelist += [iname]
 
+        print('loading %s'%(iname))
         with h5py.File(fname,'r') as f:
             xt = f['xtcav']['train']['images'][()]
             for i in xt:
@@ -67,8 +67,10 @@ def main():
                 (lenv,lenh) = im.shape
                 if type(datalist) == type(None):
                     datalist = [im.flatten()]
+                    inamelist = [iname]
                 else:
                     datalist += [im.flatten()]
+                    inamelist += [iname]
                 nimages += 1
     data = np.array(datalist,dtype=int)
     avgimg = np.mean(data,axis=0)
@@ -79,9 +81,8 @@ def main():
     print('Time for SVD calculation = %.2f'%svdtime)
 
     with h5py.File(oname,'a') as out:
-        thistime = time.ctime()
-        filehash.update(str(oname + thistime).encode())
-        eigenkey = ofname + filehash.hexdigest()
+        filehash.update(str('_'.join(inamelist)).encode())
+        eigenkey = filehash.hexdigest()
         if eigenkey in out.keys():
             del out[eigenkey]
         grp = out.create_group(eigenkey)
@@ -108,5 +109,5 @@ if __name__ == '__main__':
     if len(sys.argv)<2:
         print('give me an output path and a list of training datasets')
     else:
-        print(len(sys.argv))
+        print('len(sys.argv) = %i'%(len(sys.argv)))
         main()
