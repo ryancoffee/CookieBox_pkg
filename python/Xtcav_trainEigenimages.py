@@ -62,10 +62,10 @@ def main():
         print('loading %s'%(iname))
         with h5py.File(fname,'r') as f:
             xt = f['xtcav']['train']['images'][()]
-            print(xt[0].shape)
-
+            rows,cols = xt[0].shape
             for i in xt:
-                im = cv2.blur(np.array(i[64:-64,200:-200]),ksize=(3,3))[::4,::4]
+                im = cv2.blur(np.array(i[(rows>>1)-256:(rows>>1)+256,(cols>>1)-256:(cols>>1)+256]),ksize=(3,3))[::4,::4]
+                #im = cv2.blur(np.array(i[64:-64,200:-200]),ksize=(3,3))[::4,::4]
                 (lenv,lenh) = im.shape
                 if type(datalist) == type(None):
                     datalist = [im.flatten()]
