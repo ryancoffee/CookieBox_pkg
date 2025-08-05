@@ -8,6 +8,7 @@
 #include "MsgLogger/MsgLogger.h"
 
 #include "psddl_psana/camera.ddl.h"
+#include "psddl_psana/evr.ddl.h"
 
 
 #include <vector>
@@ -146,8 +147,8 @@ class TimeTool
 
 		std::ofstream m_outfile;
 		std::string m_filename;
-//		std::ofstream * m_samplecodes;
-//		std::string m_samplecodesname;
+		//std::ofstream * m_samplecodes;
+		//std::string m_samplecodesname;
 
 		std::vector<double> m_calib;
 		std::vector< std::vector<double> > m_data; 

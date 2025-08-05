@@ -14,12 +14,15 @@
 // C/C++ Headers --
 //-----------------
 #include <algorithm>
+#include <memory>
 #include <map>
 #include <fftw/fftw3.h>
 #include <time.h>
 #include <iterator>
 #include <map>
 #include <utility>
+//#include <boost/cstdint.hpp>
+#include <stdint.h>
 
 //----------------------
 // Base Class Headers --
@@ -50,9 +53,11 @@
 #include "CookieBox_pkg/Gdet.h"
 #include "CookieBox_pkg/Ebeam.h"
 #include "CookieBox_pkg/TimeTool.h"
-#include "CookieBox_pkg/TransAbs.h"
+//#include "CookieBox_pkg/TransAbs.h"
 #include "CookieBox_pkg/Learning.h"
 #include "CookieBox_pkg/dataops.h"
+
+#include <fftw/fftw3.h>
 
 
 //------------------------------------
@@ -119,16 +124,16 @@ class CookieBox_mod
 	typedef ndarray<const short,2> shortwf_t;
 
 	typedef boost::multi_array<unsigned,2> a2d_u_t;
-	typedef boost::multi_array<long long,2> a2d_ll_t;
+	typedef boost::multi_array<long,2> a2d_ll_t;
 	typedef boost::multi_array<long double,2> a2d_ld_t;
 	typedef boost::multi_array<double,2> a2d_d_t;
-	typedef boost::multi_array<long long,3> a3d_ll_t;
+	typedef boost::multi_array<long,3> a3d_ll_t;
 	typedef boost::multi_array<long double,3> a3d_ld_t;
 	typedef boost::multi_array<double,3> a3d_d_t;
-	typedef boost::multi_array<long long,4> a4d_ll_t;
+	typedef boost::multi_array<long,4> a4d_ll_t;
 	typedef boost::multi_array<long double,4> a4d_ld_t;
 	typedef boost::multi_array<double,4> a4d_d_t;
-	typedef boost::multi_array<long long,5> a5d_ll_t;
+	typedef boost::multi_array<long,5> a5d_ll_t;
 	typedef boost::multi_array<long double,5> a5d_ld_t;
 	typedef boost::multi_array<double,5> a5d_d_t;
 
@@ -149,7 +154,7 @@ class CookieBox_mod
 	CookieBox_mod (const std::string& name) ;
 
 	// Destructor
-			virtual ~CookieBox_mod () ;
+	virtual ~CookieBox_mod () ;
 
 			/// Method which is called once at the beginning of the job
 			virtual void beginJob(Event& evt, Env& env);
@@ -182,12 +187,15 @@ class CookieBox_mod
 			READ_CorrFactorsMemFuncPtr read_corr_factors;
 			READ_E2T_ConversionMemFuncPtr read_e2t_conversion;
 
+			fftw_plan plan_r2hc;
+			fftw_plan plan_hc2r;
+
 			// member objects //
 			Ebeam m_eb;
 			TimeTool m_tt;
 			Gdet m_gd;
 			Xtcav m_xt;
-			TransAbs m_ta;
+			//TransAbs m_ta;
 			std::vector<Acqiris> m_aq;
 			Learning m_learn;
 
@@ -203,6 +211,7 @@ class CookieBox_mod
 			void setWriteStyle(writeStyle style);
 			bool printSpectra(void);
 			bool printSpectraLegendre(void);
+			bool printShots(void);
 			bool printIntegs(void);
 
 			bool read_e2t_interp_conversion(std::string & filename);
@@ -226,6 +235,7 @@ class CookieBox_mod
 			void weinerfilter(std::vector<double *> & in,const unsigned sz); // used to smooth the projections
 			bool fftDiffSpectra(void);
 			bool m_makeRotorProjections;
+			bool m_printRotorResiduals;
 
 
 			// for exporting to Python plotter module //
@@ -276,11 +286,13 @@ class CookieBox_mod
 			std::vector< std::vector< double > > m_e2t_data;
 			bool m_use_e2t;
 			std::vector< std::map< double, double > > m_corr_factors_maps;
-			bool m_adjustTransmission;
+			//bool m_adjustTransmission;
 			bool m_legendreVecs_filled;
 			bool m_printLegendreFFTs;
 			double m_gaussroll_center,m_gaussroll_width;
 			bool m_gaussroll;
+			bool m_rollvibration;
+			size_t m_nrolls;
 
 			bool m_printMarkusLegendresCompare;
 			std::ofstream m_markusfileChans;

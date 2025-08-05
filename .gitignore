@@ -1,1 +1,3 @@
 SConscript
+*.swp
+slurm-*.out

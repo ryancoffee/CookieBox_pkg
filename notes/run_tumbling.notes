@@ -1,0 +1,52 @@
+### depricated 
+# In either case, remember to sit_setup (or the equivalent to get all the libraries needed.
+#
+# mpirun -n 2 python ./mpi_driver.py -n 2000 -c psana_tumbling.cfg 'exp=amoi0314:run=172'
+# this is to debug from psana command line.
+#
+#
+#
+# bsub -q psanaq -o forKareem.172.Nranks.log -a mympi -n 4 python ./mpi_driver.py -n 0 -c psana_tumbling.cfg 'exp=amoi0314:run=172'
+# This is to submit to the batch queue after debugging.
+# Also, there is a diminishing return if you scatter across more than 8 nodes or so.  Maybe 12 is the magic number?
+#
+#
+#### depricated #### bsub -a mympi -n 4 -q psanaq python ./mpi_driver.py -n 0 -c psana_tumbling.cfg exp=amoi0314:run=167
+
+ssh psbuild-rhel7
+source CookieBox_pkg/config/runpre.bash
+bsub -n 12 -q psanaq mpirun python ./mpi_driver.py -n 0 -c psana_tumbling.cfg exp=amoi0314:run=172
+
+coffee@psanagpu106:~$ cd analysis_2015/
+coffee@psanagpu106:analysis_2015$ source runpre.bash 
+coffee@psanagpu106:analysis_2015$ bsub -q psanaq -o runfull.log mpirun python ./mpi_driver.py -n 0 -c psana_tumbling.cfg exp=amoi0314:run=172
+
+
+
+
+whicn bsub is proken, like when it doesnt see lbs.params. or something, check that we are really running bsubx
+e.g. 
+ls -l `which bsub`
+will show whcih bsub is used and where its link points... it should point top bsubx
+
+That bsubx can be run as this also 
+/afs/slac.stanford.edu/package/lsf/curr/@sys/bin/bsubx -n 12 -q psanaq mpirun python ./mpi_driver.py -n 0 -c psana_tumbling.cfg exp=amoi0314:run=172
+
+
+To edit code and build with scons  
+ssh psbuild-rhel7
+cd ~/analysis_2015/
+source runpre.bash
+sit_setup
+
+
+
+To run without batch
+mpirun -n 4 python ./mpi_driver.py -n 10000 -c psana_tumbling.cfg exp=amoi0314:run=164
+
+
+bhosts -w psanafarm
+to ckech the farm resources....
+bjobs -uall -q psfehq
+bjobs -uall -q psanaq
+

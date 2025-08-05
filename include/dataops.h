@@ -16,17 +16,16 @@
 #include <cmath>
 #include <boost/multi_array.hpp>
 #include <boost/math/tools/polynomial.hpp>
+#include <complex>
+#include <valarray>
 
 namespace CookieBox_pkg {
 
-	/*
-	// Someday... template these guys
 	// That someday is now !!!
 	typedef std::vector<float> record_f;
 	typedef  std::vector< record_f > data_f;
 	typedef std::vector<std::string> record_s;
 	typedef  std::vector< record_s > data_s;
-	*/
 	template <typename X_t,typename Y_t> 
 	Y_t polynomial(const X_t xin,const std::vector<Y_t> c){
 		assert(c.size()>1);
@@ -37,6 +36,38 @@ namespace CookieBox_pkg {
 		}
 		return y;
 	}
+	template <typename T>
+	inline void polarTohc(const size_t sz,const std::valarray<T> rho, const std::valarray<T> phi,T* y)
+	{
+		std::complex<T> z;
+		y[0] = rho[0];
+		for (size_t k=1;k<sz/2;++k){
+			z = std::complex<T>(rho[k],0.) * std::exp(std::complex<T>(0.,phi[k]));
+			y[k] = std::real(z);
+			y[sz-k] = std::imag(z);
+		}
+		y[sz/2] = rho[sz/2];
+	}
+	template <typename T>
+	inline void hcToPolar(const size_t sz,const T* y,std::valarray<T> rho, std::valarray<T> phi)
+	{
+		/*
+		FFTW_HC2R. This consists of the non-redundant half of the complex output for a 1d real-input DFT of size n, stored as a sequence of n real numbers (double) in the format:
+		r0, r1, r2, ..., rn/2, i(n+1)/2-1, ..., i2, i1
+		*/
+		std::complex<T> z;
+		rho[0] = y[0];
+		phi[0] = 0.;
+		for (size_t k=1;k<sz/2;++k){
+			z = std::complex<T>(y[k] , y[sz-k]);
+			rho[k] = rho[sz-k] = std::abs(z);
+			phi[k] = std::arg(z);
+			phi[sz-k] = -phi[k];
+		}
+		rho[sz/2] = y[sz/2];
+		phi[sz/2] = 0.;
+	}
+
 
 	template <typename T>
 	void fixedfilter(T * vec, const size_t sz){
@@ -72,6 +103,21 @@ namespace CookieBox_pkg {
 			vec[i] -= (mean2-mean1)/(x2-x1)*(T(i)-x1) + mean1/T(steps);
 		}
 	}
+	
+	template <typename T>
+	void sin2mask(T * outvec, T * invec, const size_t sz, const T center, const T width)
+	{
+		for (size_t i = 0;i<sz;++i){
+			T x = T(M_PI)*(T(i)-center)/(T(2)*width);
+			if (std::abs(x) > T(1)){
+				outvec[i] = T(0);
+			} else {
+				outvec[i] = invec[i] * std::pow(std::cos(x),int(2));
+			}
+		}
+		return;
+	}
+
 	template <typename T>
 	void sin2roll(T * vec, const size_t sz, const T center, const T width)
 	{
@@ -180,21 +226,11 @@ namespace CookieBox_pkg {
 			}
 			return ins;
 		}
-		/*
-	template <typename T, int dim>
-		std::ostream& operator << (std::ostream & outs, boost::multi_array<T,dim> & record)
-		{
-			for (unsigned i=0;i<record.shape()[0];++i){
-				outs << record[i] << "\t";
-			}
-			outs << std::flush;
-			return outs;
-		}
-		*/
 	template <typename T,typename V>
 		std::ostream& operator << (std::ostream & outs, std::pair<T,V> outpair)
 		{
 			outs << "(" << outpair.first << "," << outpair.second << ")\t" << std::flush;
+			return outs;
 		}
 	template <typename T>
 		std::ostream& operator << (std::ostream & outs, std::vector< T > & vec)
@@ -250,11 +286,34 @@ namespace CookieBox_pkg {
 			return vec;
 		}
 	template <typename T>
-		std::vector<T>& operator += (std::vector<T>& resvec,std::vector<T>& srcvec)
+		std::vector<T> & operator * (const std::vector<T> & vec,const T val)
+		{
+			std::vector<T> res(vec);	
+			res *= val;
+			return res;
+		}
+	template <typename T>
+		std::vector<T> & operator * (const T val, const std::vector<T>& vec)
+		{
+			std::vector<T> res(vec);	
+			res *= val;
+			return res;
+		}
+	template <typename T>
+		std::vector<T>& operator += (std::vector<T>& resvec,const std::vector<T>& srcvec)
 		{
 			assert(resvec.size() == srcvec.size());
 			for (unsigned i=0;i<resvec.size();++i){
 				resvec[i] += srcvec[i];
+			}
+			return resvec;
+		}
+	template <typename T>
+		std::vector<T>& operator -= (std::vector<T>& resvec,const std::vector<T>& srcvec)
+		{
+			assert(resvec.size() == srcvec.size());
+			for (unsigned i=0;i<resvec.size();++i){
+				resvec[i] -= srcvec[i];
 			}
 			return resvec;
 		}
@@ -284,6 +343,20 @@ namespace CookieBox_pkg {
 			return std::inner_product(in1.begin(),in1.end(),in2.begin(),0.);	
 		};
 	template <typename T>
+		T* & scaleVec(const size_t sz, T* & vec, T scale = T(1))
+		{
+			for (size_t i=0;i<sz;++i)
+				vec[i] *= scale;
+			return vec;
+		}
+	template <typename T>
+		std::vector<T> & scaleVec(std::vector<T> & vec, T scale = T(1))
+		{
+			std::transform(vec.begin(), vec.end(), vec.begin(), std::bind2nd(std::multiplies<T>(),scale));
+			return vec;
+		}
+
+	template <typename T>
 		inline void safe_normalize(std::vector<T> & in)
 		{
 			T ip = T(0);
@@ -293,23 +366,30 @@ namespace CookieBox_pkg {
 			assert(ip!=T(0));
 			T scale = T(1)/std::sqrt(ip);
 			std::transform(in.begin(), in.end(), in.begin(), std::bind2nd(std::multiplies<T>(),scale) );
+			return;
 		}
 	template <typename T>
 		inline void sqr_normalize(std::vector<T> & in,std::vector<bool>& mask)
 		{
 			assert(in.size() == mask.size());
 			T ip = T(0);
+			size_t n(0);
 			for (unsigned i=0;i<in.size();++i)
-				if (mask[i]) {ip += (in[i] * in[i]);}
-			assert(ip!=T(0));
-			T scale = T(1)/std::sqrt(ip);
+				if (mask[i]) {
+					ip += (in[i] * in[i]);
+					++n;
+				}
+			assert(ip!=T(0) && n!=0);
+			T scale = std::sqrt(T(n)/ip);
 			std::transform(in.begin(), in.end(), in.begin(), std::bind2nd(std::multiplies<T>(),scale) );
+			return;
 		}
 	template <typename T>
 		inline void sqr_normalize(std::vector<T> & in) {
 			T scale = sqrt( std::inner_product(in.begin(), in.end(), in.begin(),T(0)) );
 			assert(scale != T(0));
-			std::transform(in.begin(), in.end(), in.begin(), std::bind2nd(std::divides<T>(),scale) );
+			std::transform(in.begin(), in.end(), in.begin(), std::bind2nd(std::multiplies<T>(),T(in.size())/scale) );
+			return;
 		};
 	template <typename T>
 		inline T removemean(T* in, size_t sz) {
@@ -365,6 +445,7 @@ namespace CookieBox_pkg {
 			}
 			T sq_sum = std::inner_product(diff.begin(),diff.end(),diff.begin(),T(0));
 			std = std::sqrt(sq_sum / T(diff.size()));
+			return;
 		}
 
 	template <typename T>
@@ -403,14 +484,6 @@ namespace CookieBox_pkg {
 		}
 		return;
 	}
-	/*
-	std::istream& operator >> ( std::istream & ins, std::vector<double> & record );
-	std::istream& operator >> ( std::istream& ins, std::vector< std::vector <double> > & data );
-	std::istream& operator >> ( std::istream & ins, record_f & record );
-	std::istream& operator >> ( std::istream& ins, data_f & data );
-	std::istream& operator >> ( std::istream & ins, record_s & record );
-	std::istream& operator >> ( std::istream& ins, data_s & data );
-	*/
 
 }
 

@@ -10,22 +10,28 @@
 #include "ImgAlgos/GlobalMethods.h"
 #include "MsgLogger/MsgLogger.h"
 
+#include <memory>
+#include <fftw/fftw3.h>
+
 #include <vector>
 #include <algorithm>
 //#include <map> // map didn't help my badd pass of srcPtr
 #include <list>
 #include <fstream>	
 #include "CookieBox_pkg/dataops.h"
+//#include <boost/cstdint.hpp>
+#include <stdint.h>
 
 namespace CookieBox_pkg {
 
 class Acqiris 
 {
-	typedef ndarray<const short,2> shortwf_t;
+	typedef ndarray<const short int,2> wf_t;
+	typedef ndarray<const double,2> wt_t;
 	typedef boost::multi_array_types::index_range ind_range;
-	typedef boost::multi_array<long long,4>::array_view<1>::type a4d_ll_1dview_t;
-	typedef boost::multi_array<long long,4>::array_view<2>::type a4d_ll_2dview_t;
-	typedef boost::multi_array<long long,4>::array_view<2>::type a5d_ll_2dview_t;
+	typedef boost::multi_array<long,4>::array_view<1>::type a4d_ll_1dview_t;
+	typedef boost::multi_array<long,4>::array_view<2>::type a4d_ll_2dview_t;
+	typedef boost::multi_array<long,4>::array_view<2>::type a5d_ll_2dview_t;
 
 	public:
 		enum LimsInd {start,stop,bins};
@@ -33,15 +39,23 @@ class Acqiris
 		Acqiris (std::vector<unsigned>& lims_in , std::vector<unsigned>& baselims_in);
 		~Acqiris(void);
 		Acqiris( const Acqiris & rhs);
-		Acqiris & operator=( Acqiris rhs );
+		Acqiris & operator=( const Acqiris & rhs );
 	
 	private:	
-		void swap(Acqiris & a, Acqiris & b);
 		void deepcopy_data(const Acqiris & b);
+		bool fillFancyFiltered(std::vector< std::vector< int16_t > > & filtered_data);
 
 
 	public:
 		bool init( std::vector<unsigned>& lims_in, std::vector<unsigned>& baselims_in);
+		bool init( void);
+		void setmasterplans(fftw_plan * const forward,fftw_plan * const backward);
+		void pointplans(const Acqiris & rhs);
+		void pointplans(fftw_plan * const forward,fftw_plan * const backward);
+		void detachplans();
+		void setthresh(std::vector<double> in);
+		void setbwdlim(std::vector<size_t> in);
+		void setbwdnr(std::vector<float> in);
 
 		inline bool use(bool in){m_use = in;return m_use;}
 		inline bool use(void){return m_use;}
@@ -68,6 +82,10 @@ class Acqiris
 		void evtput(Event& evt, Env& env);
 		void evtput(Event& evt, Env& env, const unsigned chan);
 
+		bool ydy_fill(Event& evt, Env& env, a5d_ll_2dview_t & slice, a4d_ll_1dview_t & shotslice);
+		bool yddy_fill(Event& evt, Env& env, a5d_ll_2dview_t & slice, a4d_ll_1dview_t & shotslice);
+		bool filtered_deconv_fill(Event& evt, Env& env, a5d_ll_2dview_t & slice, a4d_ll_1dview_t & shotslice);
+		bool filtered_fill(Event& evt, Env& env, a5d_ll_2dview_t & slice, a4d_ll_1dview_t & shotslice);
 		bool fill(Event& evt, Env& env, a5d_ll_2dview_t & slice, a4d_ll_1dview_t & shotslice);
 		bool fill(Event& evt, Env& env, a4d_ll_2dview_t & slice);
 		bool fill(Event& evt, Env& env);
@@ -82,6 +100,24 @@ class Acqiris
 	protected:
 
 	private:
+		double * wf_y; // = (double *) fftw_malloc(sizeof(double) * sz);
+		double * wf_ddy; // = (double *) fftw_malloc(sizeof(double) * sz);
+		double * wf_dy; // = (double *) fftw_malloc(sizeof(double) * sz);
+		double * wf_Y_hc; // = (double *) fftw_malloc(sizeof(double) * sz);
+		std::valarray<double> wf_Y_rho;
+		std::valarray<double> wf_Y_phi;
+		double * wf_DDY_hc; // = (double *) fftw_malloc(sizeof(double) * sz);
+		double * wf_DY_hc; // = (double *) fftw_malloc(sizeof(double) * sz);
+		double * wf_deconv;  // = (double *) fftw_malloc(sizeof(double) * sz);
+		double * wf_DECONV; // = (double *) fftw_malloc(sizeof(double) * sz);
+		std::valarray<double> wf_DECONV_rho;
+		std::valarray<double> wf_DECONV_phi; 
+		fftw_plan* plan_r2hc_Ptr;
+		fftw_plan* plan_hc2r_Ptr;
+
+		bool setDeconvKernel(void);
+		bool m_deconvKernelSet;
+
 		bool m_use,m_print,m_invert;
 		std::ofstream m_outfile;
 		std::string m_filename;
@@ -89,15 +125,25 @@ class Acqiris
 		bool m_getConfig;
 		boost::shared_ptr<Psana::Acqiris::ConfigV1> m_ConfigPtr;
 		boost::shared_ptr<Psana::Acqiris::DataDescV1> m_srcPtr; 
+
 		Source m_srcStr;
 		Pds::Src m_src;
 
-		std::vector< std::vector<int> > m_data;
+		//std::vector< std::vector<int16_t> > m_data;
+		std::vector< std::vector<uint16_t> > m_data;
+		std::vector< double > m_thresh;
+		std::vector< size_t > m_bwd_lim;
+		std::vector< float > m_bwd_nr;
 
 		unsigned m_nchannels;
 		unsigned m_max_samples;
 		std::vector<unsigned> m_lims;
 		std::vector<unsigned> m_baselims;
+		double m_sampleInterval;
+
+		// Configuration related
+		std::vector<double> m_vert_slope;
+		std::vector<double> m_vert_offset;
 
 
 		// 	MPI related	//
