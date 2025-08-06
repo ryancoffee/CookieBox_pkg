@@ -9,10 +9,12 @@ import math
 import DataSelector
 
 def main(flist):
+    plotting = False
     for fname in flist:
         trainselect = DataSelector.DataSelector(32)
         trainselect.Load(fname,1<<9)
-        trainselect.PlotDistributions()
+        if plotting:
+            trainselect.PlotDistributions()
         outname,ext = os.path.splitext(fname)
         outname += '_train' + ext
         trainselect.StoreH5(outname)

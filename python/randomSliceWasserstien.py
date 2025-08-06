@@ -9,6 +9,7 @@ import math
 import DataSelector
 
 def main(aname:str,bname:str):
+    plotting = False
     samplerows:int = 64
     maxhist = 1<<11
     rmse_hist = [0]*((maxhist>>2)+1)
@@ -46,13 +47,15 @@ def main(aname:str,bname:str):
 
 
         
-        histbins = [(1<<2)*i for i in range((maxhist>>2)+2)]
-        plt.stairs(rmse_hist,histbins,label='histogram')
-        plt.stairs(rmse_leveled_hist,histbins,label='leveled histogram')
-        plt.xlabel('rmse value')
-        plt.ylabel('occurence')
-        plt.legend()
-        plt.show()
+
+        if plotting:
+            histbins = [(1<<2)*i for i in range((maxhist>>2)+2)]
+            plt.stairs(rmse_hist,histbins,label='histogram')
+            plt.stairs(rmse_leveled_hist,histbins,label='leveled histogram')
+            plt.xlabel('rmse value')
+            plt.ylabel('occurence')
+            plt.legend()
+            plt.show()
         #grab two images
         #select random rows
         #evaluate cumsum and then MSE for matched random rows.

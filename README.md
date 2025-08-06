@@ -28,7 +28,7 @@ python3 python/Xtcav_store_dark.py amo86815 58 62 68
 # Training set composition  
 Now, for choosing whether a new image is added to the training set or discarded, I'm using ```./python/randomSliceWasserstein.py``` like this...   
 ```bash
-python3 ./python/randomSliceWasserstien.py /media/coffee/9C33-6BBD/temp_xtcav/amo86815/xtcav_bright_images_69.h5 /media/coffee/9C33-6BBD/temp_xtcav/amo86815/xtcav_bright_images_69.h5 
+python3 ./python/Xtcav_composeTranin.py /media/coffee/9C33-6BBD/temp_xtcav/amo86815/xtcav_bright_images_*.h5 
 ```
 and this measures random selection from one file with a rendom selection for either the same or a different file.  
 The so called "leveling" that I'm doing is to choose whether to keep the sample based on its mean random slice rmse with the comparator.  
