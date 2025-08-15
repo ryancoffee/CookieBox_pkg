@@ -12,7 +12,7 @@ def main(flist):
     plotting = False
     for fname in flist:
         trainselect = DataSelector.DataSelector(32)
-        trainselect.Load(fname,1<<9)
+        trainselect.Load(fname,1<<6) #1<<9)
         if plotting:
             trainselect.PlotDistributions()
         outname,ext = os.path.splitext(fname)

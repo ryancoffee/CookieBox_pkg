@@ -70,7 +70,7 @@ def main():
 
             while nevent < nlimit:
                 if utils.bit_count(nevent)==1: # ^ (utils.bit_count(nevent)==2 and utils.bit_count(nevent&(1<<8))==1):
-                    print('working event: %i'%(nevent))
+                    print('working event: %i \tfor %s'%(nevent,dsourcestr))
                 #_ = [next(ds.events) for i in range(nskip)]
                 evt = next(ds.events())
                 raw = xt.raw(evt)

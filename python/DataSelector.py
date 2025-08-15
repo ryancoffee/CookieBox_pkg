@@ -3,8 +3,10 @@ import numpy as np
 import random
 import h5py
 import time
+import hashlib
 import math
 import matplotlib.pyplot as plt
+import utils
 
 class DataSelector:
     def __init__(self,subsamplerows:int=1<<6,style:str='randomWasserstein'):
@@ -24,6 +26,7 @@ class DataSelector:
         return
 
     def Load(self,fname:str,nsamples:int=1<<10,shuffle=True): # fill a training set of images up to nsamples deep
+        print('loading %s'%fname)
         with h5py.File(fname,'r') as f:
             allkeys = [k for k in f['xtcav'].keys()]
             if shuffle:
@@ -49,14 +52,21 @@ class DataSelector:
                     self.trainKeys += [k]
                     self.trainMeasures += [d]
                     self.rmse_leveled_hist[ min(d,len(self.rmse_leveled_hist)-1) ] += 1
-                    print(len(self.trainSet))
+                    l = len(self.trainSet)
+                    if (utils.bit_count(l)==1 or utils.bit_count(l%64)==0):
+                        print('\ttraining set legth = %i'%l)
         return self
 
+
     def StoreH5(self,outname:str):
+        grpstr = 'train_%s'%(hashlib.blake2b(time.asctime().encode(),digest_size=2).hexdigest()) 
+        print('Writing to %s training set %s'%(outname,grpstr) )
         with h5py.File(outname,'a') as o:
             if 'xtcav' not in o.keys():
                 o.create_group('xtcav')
-            grp = o['xtcav'].create_group('train')
+            if grpstr in o['xtcav'].keys():
+                del o['xtcav'][grpstr]
+            grp = o['xtcav'].create_group(grpstr)
             grp.create_dataset('images',data=self.trainSet)
             grp.create_dataset('keys',data=self.trainKeys)
             grp.create_dataset('measures',data=self.trainMeasures)
