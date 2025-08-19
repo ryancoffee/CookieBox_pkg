@@ -11,6 +11,12 @@ The slurmscript allows batch submitting a list of run numbers as follows...
 ./slurmscript.bash /sdf/data/lcls/ds/amo/amoi0216/scratch /sdf/data/lcls/ds/amo/amoi0216/scratch amoi0216 17 18 19 20 21 22
 ```
 
+THe alternative for running on directly on the `.xtc` file segments with Xtcav only...   
+```bash
+for r in 3 7 5 4; do ./slurmscript_xtcOnly.bash /sdf/data/lcls/ds/amo/amoe7615/scratch /sdf/data/lcls/ds/amo/amoe7615/scratch amoe7615 /sdf/data/lcls/ds/amo/amoe7615/xtc/e569-r$(printf "%04d" $r)-s80-c*.xtc;done
+for r in 240 241 236 234 229 225 213 212 203 201 182 140 130 125 126 127 128 103 106 97; do ./slurmscript_xtcOnly.bash /sdf/data/lcls/ds/amo/amoh5215/scratch /sdf/data/lcls/ds/amo/amoh5215/scratch amoh5215 /sdf/data/lcls/ds/amo/amoh5215/xtc/e576-r$(printf "%04d" $r)-s80-c*.xtc;done
+```
+
 
 # Dark Images
 New slurm way to compute the dark images, also storing in single run per darkimage.h5 file.  
