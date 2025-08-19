@@ -26,36 +26,38 @@ def main(runstr,xtcFileName):
     navglim_shift = 7
     nskip = 0
     avgidx = 0
+    with h5py.File(fname,'w') as f:
+        if runstr in list(f.keys()):
+            del f[runstr]
+        rungrp = f.create_group(runstr)
+
     while nevent < nlimit:
         nevent += 1
-        try:
-            evt = next(ds.events())
-            _ = [next(ds.events()) for i in range(nskip)]
-            raw = xt.raw(evt)
-            if raw is not None:
-                nx,ny = utils.getshape(raw)
-                im = np.zeros((nx,ny),dtype=np.uint16)
-                if (avgimg is None) or (stepevent == 0):
-                    avgimg = np.zeros((nx,ny),dtype=np.uint16)
-                for i in range(nx):
-                    row = raw[i]
-                    for j in range(ny):
-                        im[i,j] = row[j]
-                im = utils.massage(im)
-                if nevent%(1<<navglim_shift) == 0:
-                    avgimg = np.copy(im)
-                else:
-                    avgimg += im
-            stepevent += 1
-
+        evt = next(ds.events())
+        _ = [next(ds.events()) for i in range(nskip)]
+        raw = xt.raw(evt)
+        if raw is not None:
+            nx,ny = utils.getshape(raw)
+            im = np.zeros((nx,ny),dtype=np.uint16)
+            if (avgimg is None) or (stepevent == 0):
+                avgimg = np.zeros((nx,ny),dtype=np.uint16)
+            for i in range(nx):
+                row = raw[i]
+                for j in range(ny):
+                    im[i,j] = row[j]
+            im = utils.massage(im)
             if stepevent%(1<<navglim_shift) == 0:
-                avgimg >>= navglim_shift 
-                akey = 'avg_%03i'%avgidx
+                avgimg = np.copy(im)
+            else:
+                avgimg += im
+
+            stepevent += 1
+    
+            if stepevent%(1<<navglim_shift) == 0:
                 with h5py.File(fname,'a') as f:
-                    if runstr in list(f.keys()):
-                        rungrp = f[runstr]
-                    else:
-                        rungrp = f.create_group(runstr)
+                    rungrp = f[runstr]
+                    avgimg >>= navglim_shift 
+                    akey = 'avg_%04i'%avgidx
                     if akey in list(rungrp.keys()):
                         del rungrp[akey]
                     print('storing %s'%akey)
@@ -65,8 +67,6 @@ def main(runstr,xtcFileName):
                     avgidx += 1
                 stepevent = 0
             
-        except:
-                next
     return
 
 if __name__ == '__main__':
