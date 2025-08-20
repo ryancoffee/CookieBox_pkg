@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import utils
 
 class DataSelector:
-    def __init__(self,subsamplerows:int=1<<6,style:str='randomWasserstein'):
+    def __init__(self,subsamplerows:int=1<<4,style:str='randomWasserstein'):
         random.seed(time.time_ns()%(1<<10))
         self.style = style
         self.subsamplerows:int = subsamplerows
@@ -23,6 +23,10 @@ class DataSelector:
         self.maxhist = 1<<11
         self.rmse_hist = [0]*(self.maxhist)
         self.rmse_leveled_hist = [0]*(self.maxhist)
+        self.crop:bool = True
+        self.cropShape = (1<<8,1<<8)
+        self.subsample:bool = False
+        self.subsampleSkip:int = 4
         return
 
     def Load(self,fname:str,nsamples:int=1<<10,shuffle=True): # fill a training set of images up to nsamples deep
@@ -32,23 +36,40 @@ class DataSelector:
             if shuffle:
                 random.shuffle(allkeys)
             
-            self.trainSet += [f['xtcav'][allkeys[0]][()]]
+            im = f['xtcav'][allkeys[0]][()]
+            print(im.shape)
+            if self.crop:
+                self.trainSet += [utils.crop(im,newshape=self.cropShape)]
+            elif self.subsample:
+                self.trainSet += [im[::self.subsampleSkip]]
+            else:
+                self.trainSet += [im]
+
             self.trainKeys += [allkeys[0]]
             self.trainMeasures = [0]
+            print('self.trainSet[0].shape[0]',self.trainSet[0].shape[0])
             rows = [i for i in range(self.trainSet[0].shape[0])]
+            print('len(rows)',len(rows))
             random.shuffle(rows)
             self.subsamplerows = min(self.subsamplerows,self.trainSet[0].shape[0]>>2) # use at most 1/4 of the image for measuring Wasserstein
             self.measurerows = rows[:self.subsamplerows]
+            print(self.measurerows)
             for k in allkeys[1:]: # this runs from 1: since we used the 0th already to start the list.
                 if len(self.trainSet)==nsamples: # first correct neighbor distance measure for the 0th image and then break
                     self.trainMeasures[0] = self.getNeighborDistance_zeroth(self.trainSet[0])
                     self.rmse_leveled_hist[ min(self.trainMeasures[0],len(self.rmse_leveled_hist)-1) ] += 1
                     break
-                im = f['xtcav'][k][()]
+                if self.crop:
+                    im = utils.crop(f['xtcav'][k][()],newshape=self.cropShape)
+                elif self.subsample:
+                    im = f['xtcav'][k][()][::self.subsampleSkip]
+                else:
+                    im = f['xtcav'][k][()]
+
                 d = self.getNeighborDistance(im)
                 self.rmse_hist[ min(d,len(self.rmse_hist)-1) ] += 1
                 if random.uniform(0.0,1.0)<(1.0/(1.0+self.rmse_hist[min(d,len(self.rmse_hist)-1)])):
-                    self.trainSet += [f['xtcav'][k][()]]
+                    self.trainSet += [im]
                     self.trainKeys += [k]
                     self.trainMeasures += [d]
                     self.rmse_leveled_hist[ min(d,len(self.rmse_leveled_hist)-1) ] += 1

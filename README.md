@@ -19,7 +19,14 @@ for r in 240 241 236 234 229 225 213 212 203 201 182 140 130 125 126 127 128 103
 
 
 # Dark Images
-New slurm way to compute the dark images, also storing in single run per darkimage.h5 file.  
+New way to run directly on the .xtc files of only xtcav.  
+```bash
+for r in 13 18 26 40 46 58 62 68; do ./slurmdark_xtcOnly.bash amo86815 /sdf/data/lcls/ds/amo/amo86815/xtc/e609-r$(printf "%04d" $r)-s80-c*.xtc;done
+for r in 15 19 21 28 41 51 59 70; do ./slurmdark_xtcOnly.bash amoi0216 /sdf/data/lcls/ds/amo/amoi0216/xtc/e826-r$(printf "%04d" $r)-s80-c*.xtc;done
+```
+
+
+Old slurm way to compute the dark images, also storing in single run per darkimage.h5 file.  
 ```bash
 ./slurmdark.bash amo86815 13 18 26 40 46 58 62 68
 ```

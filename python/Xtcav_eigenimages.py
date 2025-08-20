@@ -14,6 +14,10 @@ import hashlib
 import time
 import DataSelector
 
+crop = True
+plotting = False
+debug = False
+
 def oversample(im,shape,factor=4,plotting=False):
     lv,lh = shape
     newshape = (factor*lv,factor*lh)
@@ -62,7 +66,13 @@ def main():
             evtkeys = list(xt.keys())
             random.shuffle(evtkeys)
             for k in evtkeys[:batchsize]:
-                im = cv2.blur(np.array(xt[k][64:-64,200:-200]),ksize=(3,3))[::4,::4]
+                if crop:
+                    if not xt[k].shape==(1<<8,1<<8):
+                        im = utils.crop(xt[k],newshape=(1<<8,1<<8))
+                    else:
+                        im = np.array(xt[k])
+                elif subsample:
+                    im = cv2.blur(np.array(xt[k]),ksize=(3,3))[::4,::4]
                 (lenv,lenh) = im.shape
                 if type(datalist) == type(None):
                     datalist = [im.flatten()]
@@ -77,27 +87,27 @@ def main():
             svdtime = stop-start
             print('Time for SVD calculation = %.2f'%svdtime)
 
-            '''
-            print(data.shape)
-            plt.imshow(data[-1].reshape((lenv,lenh)),origin='lower')
-            plt.colorbar()
-            plt.show()
-            print(np.max(data),np.min(data))
-            plt.imshow(avgimg.reshape((lenv,lenh)))
-            plt.colorbar()
-            plt.title('lenv = %i, lenh = %i'%(lenv,lenh))
-            plt.show()
+            if debug:
+                print(data.shape)
+            if plotting:
+                plt.imshow(data[-1].reshape((lenv,lenh)),origin='lower')
+                plt.colorbar()
+                plt.show()
+                print(np.max(data),np.min(data))
+                plt.imshow(avgimg.reshape((lenv,lenh)))
+                plt.colorbar()
+                plt.title('lenv = %i, lenh = %i'%(lenv,lenh))
+                plt.show()
 
-            plt.loglog(eigvals,'.')
-            plt.xlabel('eigenimage')
-            plt.ylabel('eigenvalue')
-            plt.savefig('../eigenimages/eigenvalues.png')
-            plt.show()
-            for i in range(1<<4):
-                plt.imshow((eigvecs[i,:]).reshape((lenv,lenh)))
-                plt.title('eigenimage %i'%(i))
-                plt.savefig('../eigenimages/eigenimage_%03i.png'%(i))
-            '''
+                plt.loglog(eigvals,'.')
+                plt.xlabel('eigenimage')
+                plt.ylabel('eigenvalue')
+                plt.savefig('../eigenimages/eigenvalues.png')
+                plt.show()
+                for i in range(1<<4):
+                    plt.imshow((eigvecs[i,:]).reshape((lenv,lenh)))
+                    plt.title('eigenimage %i'%(i))
+                    plt.savefig('../eigenimages/eigenimage_%03i.png'%(i))
 
             with h5py.File(oname,'a') as out:
                 thistime = time.ctime()
@@ -124,11 +134,15 @@ def main():
                     eigimover = grp.create_dataset('eigenimage_oversampled_%03i'%i,data=oversample(eigvecs[i,:],shape=(lenv,lenh),factor=4,plotting=False)) 
                     eigimover.attrs.create('note',data='# this is artificially oversampled by padding with zeros to get up to the original shape before the undersampling for sake of SVD')
 
-            for k in evtkeys[batchsize:batchsize + 10]:
-                im = np.array(xt[k][64:-64:4,200:-200:4]).flatten()
-                coeffs = [np.inner(im,eigvecs[i,:]) for i in range(1<<8)]
-                plt.scatter(np.arange(len(coeffs)),coeffs,label=k)
-            plt.show()
+            if plotting:
+                for k in evtkeys[batchsize:batchsize + 10]:
+                    if crop:
+                        im = np.array(xt[k][(rdim>>1)-(1<<7):(rdim>>1)+(1<<7),(cdim>>1)-(1<<7):(cdim>>1)+(1<<7)])
+                    else:
+                        im = np.array(xt[k][64:-64:4,200:-200:4]).flatten()
+                    coeffs = [np.inner(im,eigvecs[i,:]) for i in range(1<<8)]
+                    plt.scatter(np.arange(len(coeffs)),coeffs,label=k)
+                plt.show()
             
 
 

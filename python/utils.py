@@ -16,3 +16,7 @@ def getshape(raw):
 def bit_count(x:int):
     return bin(x).count("1")
 
+def crop(im,newshape=(1<<8,1<<8)):
+    cenr = im.shape[0]>>1
+    cenc = im.shape[1]>>1
+    return np.array(im[cenr-(newshape[0]>>1):cenr+(newshape[0]>>1),cenc-(newshape[1]>>1):cenc+(newshape[1]>>1)])
